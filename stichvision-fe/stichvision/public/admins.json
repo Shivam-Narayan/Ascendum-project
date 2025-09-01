@@ -1,0 +1,4 @@
+[
+    {"emp_id": "admin001", "password": "adminpass123"},
+    {"emp_id": "admin002", "password": "adminpass456"}
+]

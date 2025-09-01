@@ -1,0 +1,173 @@
+.adminDashboard-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4efe9 100%);
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.adminDashboard-container * {
+  box-sizing: border-box;
+}
+
+.adminDashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 0 10px;
+}
+
+.adminDashboard-info h1 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin: 0 0 5px 0;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.adminDashboard-id {
+  font-size: 0.85rem;
+  color: #6c7a89;
+  margin: 0;
+  font-weight: 500;
+  letter-spacing: 1px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 4px 10px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.adminDashboard-logoutBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #6c7a89;
+  border: 1px solid #ddd;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.adminDashboard-logoutBtn:hover {
+  background: #ff6b6b;
+  color: white;
+  border-color: #ff6b6b;
+  transform: rotate(90deg);
+}
+
+.adminDashboard-main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.adminDashboard-card {
+  background: #ffffff;
+  padding: 20px 15px;
+  border-radius: 16px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  height: 25px;
+  justify-content: center;
+}
+
+.adminDashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.adminDashboard-userManagement {
+  background: linear-gradient(45deg, #4b6cb7, #182848);
+  color: rgb(255, 255, 255);
+}
+
+.adminDashboard-reports {
+  background: linear-gradient(45deg, #f46b45, #eea849);
+  color: white;
+}
+
+.adminDashboard-analytics {
+  background: linear-gradient(45deg, #56ab2f, #a8e063);
+  color: white;
+}
+
+.adminDashboard-card h2 {
+  font-size: 1.1rem;
+  margin: 0;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* Ensure no scrollbars */
+html, body, #root {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .adminDashboard-main {
+    grid-template-columns: 1fr;
+    max-width: 300px;
+  }
+  
+  .adminDashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+}
+
+.adminDashboard-welcomeBox {
+  background: #000;
+  color: white;
+  padding: 6px 14px; 
+  border-radius: 12px;
+  text-align: center;
+  font-size: 0.9rem; 
+  font-weight: 500;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto; 
+}
+
+.adminDashboard-highlightUsername {
+  color: #ff9800;
+  font-weight: 700;
+}
+
+.adminDashboard-highlightPortal {
+  color: #4caf50;
+  font-weight: 700;
+}
+
+.adminDashboard-userManagement h2,
+.adminDashboard-reports h2,
+.adminDashboard-analytics h2 {
+  color: #ffffff;
+}
+
+.adminDashboard-section {
+  margin-top: 30px;
+  width: 100%; 
+  height: calc(100vh - 200px);
+  margin-left: 0;
+  margin-right: 0;
+  padding: 10px;
+  box-sizing: border-box;
+}

@@ -1,0 +1,200 @@
+.live-detection-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  border: 2px solid #b2dfdb;
+  border-radius: 20px;
+  margin-top: 16px;
+}
+
+.live-detection-title {
+  font-weight: 500 !important;
+  margin-bottom: 12px !important;
+  color: #222222;
+  font-size: 20px !important;
+  letter-spacing: 0.02em;
+}
+
+.live-detection-controls {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.start-btn {
+  font-weight: 500 !important;
+  border-radius: 14px !important;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1) !important;
+  padding: 10px 22px !important;
+  font-size: 15px !important;
+  min-width: 150px !important;
+  background: linear-gradient(90deg, #43e97b 0%, #38f9d7 100%) !important;
+  color: #222 !important;
+  transition: all 0.25s ease-in-out !important;
+}
+.start-btn:hover {
+  background: linear-gradient(90deg, #38f9d7 0%, #43e97b 100%) !important;
+  transform: scale(1.03);
+}
+
+.stop-btn {
+  font-weight: 500 !important;
+  border-radius: 14px !important;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1) !important;
+  padding: 10px 22px !important;
+  font-size: 15px !important;
+  min-width: 150px !important;
+  background: linear-gradient(90deg, #ff512f 0%, #dd2476 100%) !important;
+  color: #fff !important;
+  transition: all 0.25s ease-in-out !important;
+}
+.stop-btn:hover {
+  background: linear-gradient(90deg, #dd2476 0%, #ff512f 100%) !important;
+  transform: scale(1.03);
+}
+
+.batch-id-box {
+  display: inline-block;
+  padding: 10px 20px;
+  margin-bottom: 24px;
+  border-radius: 20px !important;
+  background: linear-gradient(90deg, #e0eafc 0%, #cfdef3 100%);
+}
+.batch-id-text {
+  font-weight: 500 !important;
+  color: #333;
+  font-size: 15px !important;
+  letter-spacing: 0.02em;
+}
+.batch-id-value {
+  color: #000000;
+  font-weight: 500;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+
+.live-stream {
+  margin-bottom: 24px;
+  text-align: center;
+}
+.live-stream-img {
+  width: 640px;
+  height: 480px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid #1976d2;
+  display: block;
+  margin: 0 auto;
+}
+
+.defect-results {
+  margin-top: 32px;
+}
+.defect-results-title {
+  font-weight: 600 !important;
+  margin-bottom: 14px !important;
+  color: #1976d2;
+  font-size: 22px !important;
+  letter-spacing: 0.01em;
+}
+.defect-results-container {
+  width: 100%;
+  overflow-x: auto;
+  padding: 8px; 
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  margin: 0;
+}
+
+.defect-modal-img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 2px solid #1976d2;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.2);
+}
+
+.defect-modal-img-container {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.defect-card {
+  border-radius: 12px !important;
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.08) !important;
+  width: 100%;
+  max-width: none;
+  transition: transform 0.2s;
+  background: #fff;
+}
+.defect-card:hover {
+  transform: scale(1.04);
+}
+.defect-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid #1976d2;
+}
+
+.no-defects {
+  padding: 20px;
+  margin-top: 20px;
+  text-align: center;
+  font-weight: 600;
+  color: #888;
+  border-radius: 20px !important;
+  background: #f5faff;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.06);
+}
+
+.defect-modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  padding: 24px;
+  min-width: 320px;
+  max-width: 400px;
+  outline: none;
+}
+.defect-modal-title {
+  font-weight: 600 !important;
+  margin-bottom: 14px !important;
+  color: #1976d2;
+  font-size: 22px !important;
+  letter-spacing: 0.01em;
+}
+.defect-modal-label {
+  font-weight: 600 !important;
+}
+.defect-modal-text {
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  .defect-img {
+    height: 140px;
+  }
+}
+@media (max-width: 480px) {
+  .defect-img {
+    height: 120px;
+  }
+}
+
+.defect-grid-item {
+  flex: 0 0 25% !important;
+  max-width: 25% !important;
+}
+

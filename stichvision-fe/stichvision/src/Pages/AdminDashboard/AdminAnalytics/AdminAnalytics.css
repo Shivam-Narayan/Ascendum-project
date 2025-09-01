@@ -1,0 +1,338 @@
+.adminAnalytics-container {
+  background: #ffffff;
+  width: 100%;
+  height: calc(100vh - 100px);
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #b2dfdb;
+  color: #000;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.adminAnalytics-container h2 {
+  margin-bottom: 20px;
+  color: #333;
+  text-align: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+/* Summary Cards */
+.adminAnalytics-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.adminAnalytics-summary-card {
+  border-radius: 12px;
+  padding: 15px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.adminAnalytics-summary-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.adminAnalytics-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+}
+
+.adminAnalytics-detection-card::before { background: linear-gradient(90deg, #8884d8, #6a5acd); }
+.adminAnalytics-annotation-card::before { background: linear-gradient(90deg, #82ca9d, #32cd32); }
+.adminAnalytics-login-card::before { background: linear-gradient(90deg, #ffc658, #ffa500); }
+.adminAnalytics-defect-card::before { background: linear-gradient(90deg, #ff8042, #ff4500); }
+
+.adminAnalytics-card-icon {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.adminAnalytics-summary-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.adminAnalytics-stat-number {
+  font-size: 28px;
+  font-weight: bold;
+  margin: 0;
+  color: #2c3e50;
+}
+
+.adminAnalytics-stat-label {
+  font-size: 12px; 
+  color: #7f8c8d;
+  display: block;
+  margin-top: 5px;
+}
+
+/* Tab Navigation */
+.adminAnalytics-tab-navigation {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.adminAnalytics-tab-btn {
+  background: none;
+  border: none;
+  padding: 12px 20px; 
+  cursor: pointer;
+  font-size: 15px;
+  color: #7f8c8d;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.adminAnalytics-tab-btn.adminAnalytics-active {
+  color: #3498db;
+  font-weight: 600;
+}
+
+.adminAnalytics-tab-btn.adminAnalytics-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #3498db;
+  border-radius: 3px 3px 0 0;
+}
+
+.adminAnalytics-tab-btn:hover {
+  color: #3498db;
+}
+
+/* Charts Container - This is the main scrollable area */
+.adminAnalytics-charts-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 10px;
+  min-height: 0;
+}
+
+/* Grid layout */
+.adminAnalytics-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 25px;
+  padding-bottom: 20px;
+}
+
+.adminAnalytics-chart-card {
+  background: #f9f9f9;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.adminAnalytics-chart-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.adminAnalytics-chart-card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #2c3e50;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* Detailed View */
+.adminAnalytics-detailed-view {
+  padding: 15px 0;
+}
+
+.adminAnalytics-data-table {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+.adminAnalytics-data-table h3 {
+  margin-top: 0;
+  color: #2c3e50;
+  font-size: 20px;
+  margin-bottom: 15px;
+}
+
+.adminAnalytics-data-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.adminAnalytics-data-table th, .adminAnalytics-data-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.adminAnalytics-data-table th {
+  background-color: #f5f7fa;
+  color: #2c3e50;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.adminAnalytics-data-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+/* Loading and Error States */
+.adminAnalytics-loading-spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 30px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.adminAnalytics-error-message {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.adminAnalytics-error-message h3 {
+  color: #e74c3c;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.adminAnalytics-error-message button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background-color 0.3s ease;
+}
+
+.adminAnalytics-error-message button:hover {
+  background-color: #2980b9;
+}
+
+/* Custom scrollbar for the charts container */
+.adminAnalytics-charts-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.adminAnalytics-charts-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.adminAnalytics-charts-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.adminAnalytics-charts-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .adminAnalytics-charts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .adminAnalytics-charts-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .adminAnalytics-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .adminAnalytics-container {
+    padding: 15px;
+    margin-top: 10px;
+    height: calc(100vh - 80px);
+  }
+  
+  .adminAnalytics-summary-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .adminAnalytics-chart-card {
+    padding: 15px;
+  }
+  
+  .adminAnalytics-tab-btn {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
+  
+  .adminAnalytics-data-table {
+    padding: 15px;
+  }
+  
+  .adminAnalytics-data-table th, .adminAnalytics-data-table td {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .adminAnalytics-container h2 {
+    font-size: 22px;
+  }
+  
+  .adminAnalytics-stat-number {
+    font-size: 24px;
+  }
+  
+  .adminAnalytics-charts-grid {
+    gap: 15px;
+  }
+  
+  .adminAnalytics-container {
+    height: calc(100vh - 70px);
+    padding: 10px;
+  }
+  
+  .adminAnalytics-chart-card h3 {
+    font-size: 16px;
+  }
+}

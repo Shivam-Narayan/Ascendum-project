@@ -1,0 +1,355 @@
+.usermanagement-container {
+  background: #ffffff;
+  width: 100%;
+  min-height: calc(100vh - 180px);
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #b2dfdb;
+  color: #000;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.usermanagement-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 15px;
+  flex: 1;
+}
+
+.usermanagement-table-container {
+  min-width: 1000px;
+  width: 100%;
+  position: relative;
+}
+
+.usermanagement-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.usermanagement-table th,
+.usermanagement-table td {
+  padding: 12px 15px;
+  text-align: left;
+  font-size: 14px;
+}
+
+.usermanagement-table th {
+  position: sticky;
+  top: 0;
+  background: #00796b;
+  color: white;
+  z-index: 2;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.usermanagement-table td {
+  border-bottom: 1px solid #e0f2f1;
+  background: #fff;
+  white-space: nowrap;
+}
+
+.usermanagement-table tr:last-child td {
+  border-bottom: none;
+}
+
+.usermanagement-table tr:hover td {
+  background-color: #e0f2f1;
+}
+
+/* Status indicators */
+.usermanagement-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.usermanagement-status.usermanagement-active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.usermanagement-status.usermanagement-inactive {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+/* Delete button */
+.usermanagement-delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.usermanagement-delete-btn:hover {
+  background-color: #ffebee;
+}
+
+/* Confirmation dialog */
+.usermanagement-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.usermanagement-confirmation-dialog {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 400px;
+  max-width: 90%;
+}
+
+.usermanagement-confirmation-dialog h3 {
+  margin: 0 0 16px 0;
+  color: #00796b;
+  font-size: 20px;
+}
+
+.usermanagement-confirmation-dialog p {
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+  color: #424242;
+}
+
+.usermanagement-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.usermanagement-dialog-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.usermanagement-cancel-btn {
+  background-color: #e0e0e0;
+  color: #424242;
+}
+
+.usermanagement-cancel-btn:hover {
+  background-color: #d0d0d0;
+}
+
+.usermanagement-confirm-delete-btn {
+  background-color: #e53935;
+  color: white;
+}
+
+.usermanagement-confirm-delete-btn:hover {
+  background-color: #c62828;
+}
+
+/* Scrollbar styling */
+.usermanagement-table-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+
+.usermanagement-table-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.usermanagement-table-wrapper::-webkit-scrollbar-thumb {
+  background: #b2dfdb;
+  border-radius: 4px;
+}
+
+.usermanagement-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #80cbc4;
+}
+
+/* Loading and error states */
+.usermanagement-loading, .usermanagement-error-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 18px;
+  color: #00796b;
+}
+
+.usermanagement-error-message {
+  color: #c62828;
+}
+
+/* No data container */
+.usermanagement-no-data-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  width: 100%;
+}
+
+.usermanagement-no-data {
+  text-align: center;
+  font-size: 16px;
+  color: #bbb;
+}
+
+.usermanagement-notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #4caf50;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 2000;
+  animation: usermanagement-fadeInOut 3s ease forwards;
+}
+
+.usermanagement-notification.error {
+  background: #e53935;
+}
+
+@keyframes usermanagement-fadeInOut {
+  0% { opacity: 0; transform: translateY(20px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(20px); }
+}
+
+/* Responsive styles for mobile devices */
+@media screen and (max-width: 768px) {
+  .usermanagement-container {
+    padding: 10px;
+    margin-top: 10px;
+    min-height: calc(100vh - 140px);
+  }
+  
+  .usermanagement-table-wrapper {
+    margin-top: 10px;
+  }
+  
+  .usermanagement-table th,
+  .usermanagement-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  
+  .usermanagement-confirmation-dialog {
+    padding: 16px;
+    width: 90%;
+  }
+  
+  .usermanagement-confirmation-dialog h3 {
+    font-size: 18px;
+  }
+  
+  .usermanagement-notification {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    text-align: center;
+  }
+}
+
+/* Extra small devices */
+@media screen and (max-width: 480px) {
+  .usermanagement-container {
+    padding: 8px;
+  }
+  
+  .usermanagement-table th,
+  .usermanagement-table td {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+  
+  .usermanagement-status {
+    padding: 2px 6px;
+    font-size: 10px;
+  }
+  
+  .usermanagement-delete-btn {
+    padding: 4px;
+  }
+  
+  .usermanagement-dialog-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .usermanagement-dialog-actions button {
+    width: 100%;
+  }
+}
+
+/* Search bar */
+.usermanagement-search-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.usermanagement-search-bar input {
+  width: 0;
+  opacity: 0;
+  padding: 8px 12px;
+  border: 2px solid #b2dfdb;
+  border-radius: 20px;
+  font-size: 14px;
+  outline: none;
+  transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.usermanagement-search-bar.usermanagement-open input {
+  width: 250px;
+  opacity: 1;
+  margin-right: 8px;
+}
+
+.usermanagement-search-bar .usermanagement-search-icon {
+  background: #ffffff;
+  border: 2px solid #b2dfdb;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.usermanagement-search-bar .usermanagement-search-icon:hover {
+  background-color: #e0f2f1;
+  transform: scale(1.05);
+}
