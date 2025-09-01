@@ -1,0 +1,230 @@
+.hs-sidebar {
+  position: relative;
+  width: 280px;
+  background: var(--hs-surface);
+  border-right: 1px solid var(--hs-border);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.hs-sidebar.collapsed {
+  width: 70px;
+}
+
+.hs-sidebar__header {
+  padding: 16px;
+  border-bottom: 1px solid var(--hs-border);
+  display: flex;
+  align-items: center;
+}
+
+.hs-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--hs-radius-md);
+  transition: var(--transition);
+  color: var(--hs-ink);
+}
+
+.hs-sidebar-toggle:hover {
+  background: var(--hs-bg);
+}
+
+.hs-toggle-icon {
+  transition: transform 0.3s ease;
+  font-size: 18px;
+  min-width: 18px;
+}
+
+.hs-toggle-icon.open {
+  transform: rotate(180deg);
+}
+
+.hs-brand {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--hs-primary);
+}
+
+/* New Chat Section */
+.hs-new-chat-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--hs-border);
+}
+
+.hs-new-chat-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.hs-new-chat-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--hs-shadow-2);
+}
+
+.hs-new-chat-icon {
+  font-size: 16px;
+}
+
+/* Navigation */
+.hs-nav {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hs-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: var(--hs-radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--hs-ink-2);
+  text-decoration: none;
+}
+
+.hs-nav__item:hover {
+  background: var(--hs-bg);
+  color: var(--hs-primary);
+  transform: translateX(4px);
+}
+
+.hs-nav__item.active {
+  background: var(--hs-primary);
+  color: white;
+}
+
+.hs-nav__item.active:hover {
+  background: var(--hs-primary-600);
+  transform: translateX(4px);
+}
+
+.hs-nav__icon {
+  font-size: 18px;
+  min-width: 18px;
+}
+
+.hs-nav__label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Sidebar Footer */
+.hs-sidebar__spacer {
+  flex: 1;
+}
+
+.hs-sidebar__footer {
+  padding: 16px;
+  border-top: 1px solid var(--hs-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hs-sidebar__footer .hs-btn {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+/* Logout Modal */
+.hs-logout-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.hs-logout-modal {
+  background: var(--hs-surface);
+  border-radius: var(--hs-radius-lg);
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: var(--hs-shadow-3);
+  border: 1px solid var(--hs-border);
+}
+
+.hs-logout-modal__title {
+  margin: 0 0 8px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--hs-ink);
+}
+
+.hs-logout-modal__text {
+  margin: 0 0 24px 0;
+  color: var(--hs-muted);
+  line-height: 1.5;
+}
+
+.hs-logout-modal__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hs-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    height: 100vh;
+    transform: translateX(-100%);
+  }
+  
+  .hs-sidebar.open {
+    transform: translateX(0);
+    width: min(86vw, 320px);
+  }
+  
+  .hs-sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+  
+  .hs-sidebar-toggle .hs-brand {
+    display: none;
+  }
+}
+
+/* Collapsed state styles */
+.hs-sidebar.collapsed .hs-new-chat-section,
+.hs-sidebar.collapsed .hs-nav__label,
+.hs-sidebar.collapsed .hs-sidebar__footer .label {
+  display: none;
+}
+
+.hs-sidebar.collapsed .hs-nav__item {
+  justify-content: center;
+  padding: 12px;
+}
+
+.hs-sidebar.collapsed .hs-sidebar__footer .hs-btn {
+  justify-content: center;
+  padding: 12px;
+}
+
+.hs-sidebar.collapsed .hs-sidebar__footer .hs-btn--ghost {
+  display: none;
+}
