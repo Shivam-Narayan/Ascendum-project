@@ -1,5 +1,4 @@
-# Ascendum_demo
-### ALL ASCENDUM DEMOS code will be here
+### ALL DEMOS code will be here
 
 Required Python version 3.11.0
 
