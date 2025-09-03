@@ -15,13 +15,13 @@
     `cd agrovet_be`
 
 ## to do create migartions
-   `python manage.py makemigrations folder_name` eg: agrovet
+    `python manage.py makemigrations folder_name` eg: agrovet
 
 ## To make migrate
-   `python manage.py migrate`
+    `python manage.py migrate`
 
 ## To run manage.py
-   `python manage.py runserver`
+    `python manage.py runserver`
 
 ## For Installing all the dependencies, Migrations and Start the Backend Application run the below command
     `python run.py`
