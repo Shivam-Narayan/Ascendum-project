@@ -1,5 +1,3 @@
-# Ascendum_demo
-### ALL ASCENDUM DEMOS code will be here
 # Steps to Setup & Run the Backend Project
 
 ### Create Empty folder in you are local system
@@ -11,7 +9,7 @@
         venv\Scripts\activate
     
 ## git clone the repoemo.git"
-        git clone "https://github.com
+        git clone https://github.com/Shivam-Narayan/Project-main.git
 
 ## Change the directory to Backend Folder
     `cd agrovet_be`
@@ -19,9 +17,12 @@
 ## to do create migartions
    `python manage.py makemigrations folder_name` eg: agrovet
 
+## To make migrate
+   `python manage.py migrate`
+
 ## To run manage.py
    `python manage.py runserver`
 
 ## For Installing all the dependencies, Migrations and Start the Backend Application run the below command
-        python run.py
+    `python run.py`
 
