@@ -13,6 +13,7 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import "./registerscreen.css";
 import { registerUser } from "../../services/RegisterApi";
+import { CircularProgress } from "@mui/material";
 
 type BackendErrorResponse = {
   detail?: string;
@@ -30,6 +31,7 @@ const RegisterScreen: React.FC = () => {
     password: "",
     confirmPassword: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -54,6 +56,7 @@ const RegisterScreen: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const response = await registerUser(formData);
       console.log("User registered successfully:", response);
@@ -96,6 +99,8 @@ const RegisterScreen: React.FC = () => {
       setSnackbarMessage(message);
       setSnackbarSeverity("error");
       setOpenSnackbar(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -117,6 +122,7 @@ const RegisterScreen: React.FC = () => {
             className="register-input"
             required
             margin="normal"
+            autoComplete="new-fullname"
           />
 
           <TextField
@@ -130,6 +136,7 @@ const RegisterScreen: React.FC = () => {
             className="register-input"
             required
             margin="normal"
+            autoComplete="new-email"
           />
 
           <TextField
@@ -143,6 +150,7 @@ const RegisterScreen: React.FC = () => {
             className="register-input"
             required
             margin="normal"
+            autoComplete="new-password"
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -165,6 +173,7 @@ const RegisterScreen: React.FC = () => {
             className="register-input"
             required
             margin="normal"
+            autoComplete="new-password"
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -179,18 +188,38 @@ const RegisterScreen: React.FC = () => {
           <Button
             type="submit"
             variant="contained"
-            color="primary"
-            className="register-button"
             fullWidth
-            sx={{ mt: 2 }}
+            sx={{
+              mt: 2,
+              width: "100%",
+              maxWidth: 460,
+              height: 50,
+              borderRadius: "20px",
+              background: "linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)",
+              color: "white",
+              fontWeight: 600,
+              fontSize: 16,
+              textTransform: "none",
+              boxShadow: "0 4px 14px rgba(37, 117, 252, 0.4)",
+              "&:hover": {
+                background: "linear-gradient(135deg, #5b0eaf 0%, #1a5ae0 100%)",
+                boxShadow: "0 6px 16px rgba(37, 117, 252, 0.5)",
+                transform: "translateY(-2px)",
+              },
+            }}
             disabled={
+              loading ||
               !formData.fullName ||
               !formData.email ||
               !formData.password ||
               formData.password !== formData.confirmPassword
             }
           >
-            Register
+            {loading ? (
+              <CircularProgress size={24} sx={{ color: "white" }} />
+            ) : (
+              "Register"
+            )}
           </Button>
 
           <Typography

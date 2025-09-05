@@ -27,7 +27,7 @@ const SplashScreen: React.FC = () => {
   return (
     <div className="splash-container">
       <div className={`splash-content ${isVisible ? "visible" : ""}`}>
-        <h2 className="project-name">Ascend AI Chatbot India</h2>
+        <h2 className="project-name">GEMBOT</h2>
         <div className="logo-container">
           <h1 className="company-name">Ascendum Solution</h1>
           <p className="tagline">Rise Together</p>

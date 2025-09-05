@@ -1,12 +1,17 @@
 import axios from "axios";
 import API_BASE_URL from "../config";
 
+export interface ExcelRow {
+  [key: string]: string | number | null;
+}
+
 export interface ExcelUploadResponse {
   status: string;
   dataset_id: string;
   rows: number;
   columns: number;
   columns_list: string[];
+  sample_data: ExcelRow[];
 }
 
 export async function uploadExcelOrCsv(

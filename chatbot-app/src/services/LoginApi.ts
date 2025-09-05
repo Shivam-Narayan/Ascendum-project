@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import API_BASE_URL from "../config";
+import type { UserHistoryItem } from "../types/chat";
 
 export interface LoginData {
   email: string;
@@ -13,6 +14,7 @@ export interface LoginResponse {
     full_name: string;
     email: string;
   };
+  user_history: UserHistoryItem[];
 }
 
 type BackendErrorResponse = {
@@ -26,6 +28,7 @@ export const loginUser = async (data: LoginData): Promise<LoginResponse> => {
       `${API_BASE_URL}api/login`,
       data
     );
+    localStorage.setItem("userHistory", JSON.stringify(response.data.user_history));
     return response.data;
   } catch (error) {
     const axiosError = error as AxiosError<BackendErrorResponse>;

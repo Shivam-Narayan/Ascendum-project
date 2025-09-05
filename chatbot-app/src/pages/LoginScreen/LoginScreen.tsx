@@ -8,6 +8,7 @@ import {
   InputAdornment,
   Snackbar,
   Alert,
+  CircularProgress,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +33,7 @@ const LoginScreen: React.FC = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState<"success" | "error">(
     "success"
   );
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -46,6 +48,7 @@ const LoginScreen: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const response = await loginUser(formData);
       console.log("Login successful:", response);
@@ -53,6 +56,13 @@ const LoginScreen: React.FC = () => {
       // Save token + user to localStorage/sessionStorage
       localStorage.setItem("token", response.token);
       localStorage.setItem("user", JSON.stringify(response.user));
+
+      if (response.user_history && response.user_history.length > 0) {
+        localStorage.setItem(
+          "userHistory",
+          JSON.stringify(response.user_history)
+        );
+      }
 
       setSnackbarMessage("Login successful! Redirecting...");
       setSnackbarSeverity("success");
@@ -81,6 +91,8 @@ const LoginScreen: React.FC = () => {
       setSnackbarMessage(message);
       setSnackbarSeverity("error");
       setOpenSnackbar(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,7 +100,7 @@ const LoginScreen: React.FC = () => {
     <Box className="login-container">
       <Box className="login-card">
         <Typography variant="h5" className="login-title">
-          Ascend AI Chatbot
+          GEMBOT
         </Typography>
 
         <form onSubmit={handleSubmit} className="login-form">
@@ -101,6 +113,7 @@ const LoginScreen: React.FC = () => {
             value={formData.email}
             onChange={handleChange}
             className="login-input"
+            autoComplete="new-email"
             required
           />
 
@@ -113,6 +126,7 @@ const LoginScreen: React.FC = () => {
             value={formData.password}
             onChange={handleChange}
             className="login-input"
+            autoComplete="new-password"
             required
             InputProps={{
               endAdornment: (
@@ -132,11 +146,20 @@ const LoginScreen: React.FC = () => {
             className="login-button"
             fullWidth
             sx={{ mt: 2 }}
+            disabled={loading}
           >
-            Login
+            {loading ? (
+              <CircularProgress size={24} sx={{ color: "white" }} />
+            ) : (
+              "Login"
+            )}
           </Button>
 
-          <Typography className="login-register-text" align="center" sx={{ mt: 2 }}>
+          <Typography
+            className="login-register-text"
+            align="center"
+            sx={{ mt: 2 }}
+          >
             Not registered?{" "}
             <Button
               variant="text"
