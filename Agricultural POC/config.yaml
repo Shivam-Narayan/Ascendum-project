@@ -1,0 +1,32 @@
+cookie:
+  expiry_days: 0
+  key: some_signature_key
+  name: some_cookie_name
+credentials:
+  usernames:
+    Harshi:
+      email: har@mail.com
+      name: Harshith
+      password: '456'
+      phone: '123456'
+    anil:
+      email: anil@gmail.com
+      failed_login_attempts: 0
+      logged_in: false
+      name: Anil Kumar
+      password: $2b$12$HHjbpOj.zsNT9inO3SjBS.t0fGyBuHDIHkV9wE5YHYX/eVg9bSSYu
+    jsmith:
+      email: jsmith@gmail.com
+      failed_login_attempts: 0
+      logged_in: false
+      name: John Smith
+      password: $2b$12$3IC72zp7lnNSoQ5Ojr4B6OeUKPy8IfMrQjMm5apUK.CrIy5aN9yEa
+    rbriggs:
+      email: rbriggs@gmail.com
+      failed_login_attempts: 0
+      logged_in: false
+      name: Rebecca Briggs
+      password: $2b$12$IFn6rR.bnSA4q0gxBuLNKO8EDLru8Z8uDBO9XyuRuL2mKu.oOz4X2
+pre-authorized:
+  emails:
+  - melsby@gmail.com
