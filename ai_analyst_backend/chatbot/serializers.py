@@ -1,7 +1,7 @@
 # serializers.py
 
 from rest_framework import serializers
-from .models import User
+from .models import User, UploadedFile
 from django.contrib.auth.hashers import make_password, check_password
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -29,3 +29,9 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
+
+
+class UploadedFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UploadedFile
+        fields = ['file_id', 'filename', 'file_type', 'file_path', 'metadata']

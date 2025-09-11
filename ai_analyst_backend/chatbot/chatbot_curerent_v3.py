@@ -5379,7 +5379,7 @@ class AdvancedCSVProcessor:
             # Get sample values
             non_null_values = df[col].dropna()
             if len(non_null_values) > 0:
-                summary['sample_data'][col] = non_null_values.head(3).tolist()
+                summary['sample_data'][col] = non_null_values.head(10).tolist()
             
             # Missing data
             missing_count = df[col].isnull().sum()

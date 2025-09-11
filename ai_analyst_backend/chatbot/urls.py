@@ -1,7 +1,7 @@
 # urls.py
 
 from django.urls import path
-from .views import register_user, login_user, upload_pdf, ask_pdf_question,  upload_excel_csv, ask_data_question, get_all_chat_histories_for_user, get_profile, change_password, chat_with_bot, upload_multiple_documents, ask_combined_documents
+from .views import register_user, login_user, upload_pdf, ask_pdf_question,  upload_excel_csv, ask_data_question, get_all_chat_histories_for_user, get_profile, change_password, chat_with_bot, upload_multiple_documents, ask_combined_documents, download_user_file
 # from .views1 import upload_pdf1, ask_pdf_question1, upload_excel_csv1, ask_data_question1, get_all_histories_for_user1
 urlpatterns = [
     path('register', register_user, name='register'),
@@ -19,7 +19,8 @@ urlpatterns = [
     path('chat/', chat_with_bot, name='chat_with_bot'),
 
     path('multiple/', upload_multiple_documents, name='upload_document'),
-    path('askm/<str:documents_id>/', ask_combined_documents, name='ask_document_question')
+    path('askm/<str:documents_id>/', ask_combined_documents, name='ask_document_question'),
+    path('files/download/<str:file_id>/', download_user_file, name='download_user_file'),
 
 
      # New endpoints with '1' suffix
