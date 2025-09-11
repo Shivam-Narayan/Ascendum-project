@@ -13,17 +13,20 @@ import {
   FiFileText,
   FiChevronRight,
 } from "react-icons/fi";
+import { FiRefreshCw } from "react-icons/fi";
 import { FiMail } from "react-icons/fi";
 import { Toaster } from "react-hot-toast";
 import HomeScreenSidebar from "./HomeScreenSidebar/HomeScreenSidebar";
 import HomeScreenChat from "./HomeScreenChatInterface/HomeScreenChat";
 import "./HomeScreen.css";
-// import type { UserHistoryItem, ChatHistoryItem } from "../../types/chat";
+import type { UserHistoryItem, ChatHistoryItem } from "../../types/chat";
 import { getProfile, type Profile } from "../../services/ProfileApi";
 import { changePassword } from "../../services/ChangePasswordApi";
+import downloadFile from "../../services/DownloadApi";
 import toast from "react-hot-toast";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import ReactMarkdown from "react-markdown";
+import Database from "./Database/Database";
 
 interface ChatSession {
   id: string;
@@ -49,6 +52,20 @@ type Attachment = {
   name: string;
   size: number;
   type: string;
+};
+
+// UUID generation utility
+const generateUUID = (): string => {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  // Fallback for environments without crypto.randomUUID
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
 };
 
 const HomeScreen: React.FC = () => {
@@ -77,82 +94,107 @@ const HomeScreen: React.FC = () => {
     return localStorage.getItem("activeChatId") || "";
   });
 
-  // Only migrate non-blank chats from userHistory (NEW LOGIC)
   useEffect(() => {
-  try {
-    const savedUserHistory = localStorage.getItem("userHistory");
-    const savedChatSessions = localStorage.getItem("chatSessions");
+    try {
+      const savedUserHistory = localStorage.getItem("userHistory");
+      const savedChatSessions = localStorage.getItem("chatSessions");
 
-    let sessions: ChatSession[] = [];
+      let sessions: ChatSession[] = [];
 
-    // First: restore from chatSessions (most recent user data)
-    if (savedChatSessions) {
-      const parsed = JSON.parse(savedChatSessions);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        sessions = parsed;
+      // First: restore from chatSessions (most recent user data)
+      if (savedChatSessions) {
+        const parsed = JSON.parse(savedChatSessions);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          sessions = parsed;
+        }
       }
-    }
 
-    // Second: import userHistory only if no chatSessions exist
-    if (sessions.length === 0 && savedUserHistory) {
-      const userHistory: { role: string; message: string; timestamp: string }[] =
-        JSON.parse(savedUserHistory);
+      // Second: import userHistory only if no chatSessions exist
+      if (sessions.length === 0 && savedUserHistory) {
+        const userHistory: UserHistoryItem[] = JSON.parse(savedUserHistory);
 
-      // Convert userHistory into a single ChatSession
-      const messages: Message[] = userHistory
-        .map((item) => ({
-          id: crypto.randomUUID(),
-          role: (item.role === "user" ? "user" : "bot") as "user" | "bot",
-          text: item.message || "",
-          createdAt: item.timestamp
-            ? new Date(item.timestamp).getTime()
-            : Date.now(),
-        }))
-        .filter((msg) => msg.text && msg.text.trim() !== "");
+        // Convert each UserHistoryItem into a separate ChatSession
+        const importedSessions: ChatSession[] = [];
 
-      if (messages.length > 0) {
-        const firstUserMessage = messages.find((msg) => msg.role === "user");
-        const title = firstUserMessage
-          ? firstUserMessage.text.slice(0, 30) +
-            (firstUserMessage.text.length > 30 ? "..." : "")
-          : "Imported Chat";
+        userHistory.forEach((historyItem: UserHistoryItem) => {
+          if (historyItem.chat_history.length > 0) {
+            const messages: Message[] = historyItem.chat_history
+              .map((item: ChatHistoryItem) => ({
+                id: generateUUID(),
+                role: (item.role === "user" ? "user" : "bot") as "user" | "bot",
+                text: item.message || item.answer || "",
+                createdAt: item.timestamp
+                  ? new Date(item.timestamp).getTime()
+                  : Date.now(),
+              }))
+              .filter((msg: Message) => msg.text && msg.text.trim() !== "");
 
-        const importedChat: ChatSession = {
-          id: crypto.randomUUID(),
-          title,
+            if (historyItem.filename) {
+              messages.unshift({
+                id: generateUUID(),
+                role: "user",
+                text: `File uploaded: ${historyItem.filename}`,
+                createdAt: messages[0]?.createdAt || Date.now(),
+              });
+            }
+
+            if (messages.length > 0) {
+              const firstUserMessage = messages.find(
+                (msg: Message) => msg.role === "user"
+              );
+              const title = firstUserMessage
+                ? firstUserMessage.text.slice(0, 30) +
+                  (firstUserMessage.text.length > 30 ? "..." : "")
+                : historyItem.type === "PDF"
+                ? "PDF Chat"
+                : "Imported Chat";
+
+              const chatSession: ChatSession = {
+                id: historyItem.id || generateUUID(),
+                title,
+                createdAt: messages[0]?.createdAt || Date.now(),
+                messages,
+                type: historyItem.type,
+                metadata: historyItem.metadata,
+              };
+
+              importedSessions.push(chatSession);
+            }
+          }
+        });
+
+        sessions = importedSessions;
+
+        // Sort by creation date (newest first)
+        sessions.sort((a, b) => b.createdAt - a.createdAt);
+      }
+
+      // Last resort: create a new empty chat
+      if (sessions.length === 0) {
+        const newChat: ChatSession = {
+          id: generateUUID(),
+          title: "New Chat",
           createdAt: Date.now(),
-          messages,
+          messages: [],
         };
-        sessions = [importedChat];
+        sessions = [newChat];
       }
-    }
 
-    // Last resort: create a new empty chat
-    if (sessions.length === 0) {
+      setChatSessions(sessions);
+      setActiveChatId(sessions[0].id);
+    } catch (error) {
+      console.error("Error initializing chat sessions:", error);
+      // Fallback to a new chat if something goes wrong
       const newChat: ChatSession = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         title: "New Chat",
         createdAt: Date.now(),
         messages: [],
       };
-      sessions = [newChat];
+      setChatSessions([newChat]);
+      setActiveChatId(newChat.id);
     }
-
-    setChatSessions(sessions);
-    setActiveChatId(sessions[0].id);
-  } catch (error) {
-    console.error("Error initializing chat sessions:", error);
-    // Fallback to a new chat if something goes wrong
-    const newChat: ChatSession = {
-      id: crypto.randomUUID(),
-      title: "New Chat",
-      createdAt: Date.now(),
-      messages: [],
-    };
-    setChatSessions([newChat]);
-    setActiveChatId(newChat.id);
-  }
-}, []);
+  }, []);
 
   // Get active chat
   const activeChat = useMemo(() => {
@@ -228,7 +270,7 @@ const HomeScreen: React.FC = () => {
 
     // Otherwise, create new chat as before
     const newChat: ChatSession = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       title: "New Chat",
       createdAt: Date.now(),
       messages: [],
@@ -300,6 +342,7 @@ const HomeScreen: React.FC = () => {
       case "home":
         return (
           <HomeScreenChat
+            chatId={activeChatId}
             messages={activeChat?.messages || []}
             updateMessages={(messages) => {
               if (activeChatId) {
@@ -315,9 +358,12 @@ const HomeScreen: React.FC = () => {
         return (
           <SettingsCard toggleTheme={toggleTheme} isDarkMode={isDarkMode} />
         );
+      case "database": // Add this case
+        return <Database />;
       default:
         return (
           <HomeScreenChat
+            chatId={activeChatId}
             messages={activeChat?.messages || []}
             updateMessages={(messages) => {
               if (activeChatId) {
@@ -435,11 +481,24 @@ const formatDate = (dateString: string) => {
   return `${day}-${month}-${year}`;
 };
 
+function inferFileType(path: string): string {
+  if (!path) return "Unknown";
+  const lower = path.toLowerCase();
+  if (lower.endsWith(".pdf")) return "PDF";
+  if (
+    lower.endsWith(".csv") ||
+    lower.endsWith(".xls") ||
+    lower.endsWith(".xlsx")
+  )
+    return "EXCEL";
+  if (lower.endsWith(".doc") || lower.endsWith(".docx")) return "WORD";
+  return "Unknown";
+}
+
 // Profile Card Component
 const ProfileCard: React.FC = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -448,6 +507,9 @@ const ProfileCard: React.FC = () => {
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // NEW: state to toggle document order
+  const [isReversed, setIsReversed] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -503,6 +565,19 @@ const ProfileCard: React.FC = () => {
     }
   };
 
+  // Function to toggle document order
+  const toggleOrder = () => setIsReversed((prev) => !prev);
+
+  // Function to download file using the API service
+  const handleDownload = async (fileId: string, filename: string) => {
+    try {
+      await downloadFile(fileId, filename);
+    } catch (error) {
+      // Error handling is already done in the downloadFile function
+      console.error("Download error:", error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="hs-content-card profile-card">
@@ -530,6 +605,11 @@ const ProfileCard: React.FC = () => {
       </div>
     );
   }
+
+  // Use reversed or original order for documents render
+  const docsToRender = isReversed
+    ? [...profile.documents].reverse()
+    : profile.documents;
 
   return (
     <div className="hs-content-card profile-card">
@@ -567,6 +647,54 @@ const ProfileCard: React.FC = () => {
             {formatDate(profile.registered_at)}
           </div>
         </div>
+
+        {profile.documents && profile.documents.length > 0 && (
+          <div className="hs-info-section" style={{ marginTop: 20 }}>
+            <h3>
+              Uploaded Documents ({profile.documents.length})
+              <button
+                onClick={toggleOrder}
+                title={isReversed ? "Show Oldest First" : "Show Newest First"}
+                className="hs-toggle-order-btn"
+                aria-label={
+                  isReversed ? "Show Oldest First" : "Show Newest First"
+                }
+              >
+                <FiRefreshCw size={18} />
+              </button>
+            </h3>
+
+            <div
+              className="hs-documents-scroll-container"
+              style={{
+                display: "flex",
+                overflowX: "auto",
+                gap: "12px",
+                paddingBottom: "8px",
+              }}
+            >
+              {docsToRender.map((doc) => (
+                <div key={doc.file_id} className="hs-document-item">
+                  <div>
+                    <strong>{doc.filename || "Unnamed File"}</strong>
+                    <div
+                      style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}
+                    >
+                      {doc.file_type || inferFileType(doc.file_path)}
+                    </div>
+                  </div>
+                  <button
+                    className="hs-btn hs-btn--ghost"
+                    style={{ marginTop: 12, alignSelf: "flex-start" }}
+                    onClick={() => handleDownload(doc.file_id, doc.filename)}
+                  >
+                    Download
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="hs-card-actions">
           <button

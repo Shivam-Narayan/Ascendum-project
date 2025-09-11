@@ -1,5 +1,5 @@
 export interface ChatHistoryItem {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "bot";
   message?: string;
   answer?: string;
   timestamp?: string;
@@ -16,4 +16,5 @@ export interface UserHistoryItem {
   rows?: number;
   columns?: number;
   columns_list?: string[];
+  filename?: string[];
 }

@@ -25,7 +25,6 @@ import {
 } from "../../../services/ExcelUploadApi";
 import { askDataset } from "../../../services/QueryExcelApi";
 import { askGeneral } from "../../../services/GeneralQuery";
-import type { ExcelRow } from "../../../services/ExcelUploadApi";
 import {
   uploadMultipleFiles,
   type MultipleFileUploadResponse,
@@ -54,6 +53,13 @@ type Message = {
   multipleDocumentsData?: MultipleFileUploadResponse;
   replyTo?: string;
   feedback?: Feedback;
+};
+
+// Updated type: To store both the document ID and the file name for all document types
+type UploadedDocument = {
+  id: string;
+  name: string;
+  type: "pdf" | "doc" | "excel" | "csv"; // File type for icon display
 };
 
 const formatTime12Hour = (timestamp: number): string => {
@@ -94,16 +100,31 @@ function downloadText(text: string, filename = "response.txt") {
 
 // ---------- RESPONSE CLEANERS ----------
 function formatDatasetAnswer(raw: string): string {
-  let formatted = raw.replace(/^Answer:\s*/i, "").trim();
-  formatted = formatted.replace(/Confidence:.*\n?/gi, "");
-  formatted = formatted.replace(/Method:.*\n?/gi, "");
-  const sentences = formatted
-    .split(/[.\n]/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (sentences.length > 1) {
-    return sentences[0] + "...";
+  const tableRegex = /\|(.+)\|/g;
+  const hasTable = tableRegex.test(raw);
+
+  if (hasTable) {
+    return raw;
   }
+
+  let formatted = raw;
+
+  const lines = formatted.split("\n");
+  const lastLine = lines[lines.length - 1] || "";
+
+  if (lastLine.match(/^(Confidence|Method):/i)) {
+    lines.pop();
+    formatted = lines.join("\n").trim();
+  }
+
+  if (lines.length > 0) {
+    const secondLastLine = lines[lines.length - 1] || "";
+    if (secondLastLine.match(/^(Confidence|Method):/i)) {
+      lines.pop();
+      formatted = lines.join("\n").trim();
+    }
+  }
+
   return formatted;
 }
 
@@ -122,12 +143,27 @@ interface HomeScreenChatProps {
   messages: Message[];
   updateMessages: (messages: Message[]) => void;
   isNewChat: boolean;
+  chatId: string;
 }
+
+// UUID generation utility
+const generateUUID = (): string => {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
 
 const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
   messages,
   updateMessages,
   isNewChat,
+  chatId,
 }) => {
   const [input, setInput] = useState<string>("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -139,10 +175,23 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     type: "success" | "info";
   } | null>(null);
 
+  // >>> Track multiple uploaded documents (PDFs, Word, Excel, CSV) IDs and names
+  const [uploadedDocuments, setUploadedDocuments] = useState<
+    UploadedDocument[]
+  >([]);
+  const [showDocumentSelector, setShowDocumentSelector] = useState(false);
+
+  // >>> Track selected document for querying (default to last uploaded or null)
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(
+    null
+  );
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const shouldSendFilesRef = useRef<boolean>(false);
+  const selectorWrapperRef = useRef<HTMLDivElement | null>(null);
+
   const getFileIcon = (type: string, name: string) => {
     if (type === "application/pdf" || name.endsWith(".pdf"))
       return <FaFilePdf className="hs-attachment__icon pdf" />;
@@ -167,6 +216,32 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     return <FiFileText className="hs-attachment__icon" />;
   };
 
+  // Get icon for uploaded document type in selector
+  const getDocumentIcon = (docType: UploadedDocument["type"]) => {
+    switch (docType) {
+      case "pdf":
+        return <FaFilePdf className="hs-selector-icon pdf" />;
+      case "doc":
+        return <FaFileWord className="hs-selector-icon word" />;
+      case "excel":
+        return <FaFileExcel className="hs-selector-icon excel" />;
+      case "csv":
+        return <FaFileCsv className="hs-selector-icon csv" />;
+      default:
+        return <FiFileText className="hs-selector-icon" />;
+    }
+  };
+
+  // Determine document type from file name
+  const getDocumentType = (fileName: string): UploadedDocument["type"] => {
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    if (ext === "pdf") return "pdf";
+    if (ext === "doc" || ext === "docx") return "doc";
+    if (ext === "xls" || ext === "xlsx") return "excel";
+    if (ext === "csv") return "csv";
+    return "pdf"; // default
+  };
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -181,7 +256,6 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     };
   }, []);
 
-  // New useEffect to handle automatic sending when files are selected
   useEffect(() => {
     if (shouldSendFilesRef.current && pendingFiles.length > 0) {
       sendMessage();
@@ -189,6 +263,50 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingFiles]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`uploaded_documents_${chatId}`);
+      const docs = stored ? JSON.parse(stored) : [];
+      setUploadedDocuments(docs);
+      const selected = localStorage.getItem(`selected_document_${chatId}`);
+      setSelectedDocumentId(
+        selected || (docs.length > 0 ? docs[docs.length - 1].id : null)
+      );
+    } catch {
+      setUploadedDocuments([]);
+      setSelectedDocumentId(null);
+    }
+  }, [chatId]);
+
+  useEffect(() => {
+    if (selectedDocumentId) {
+      localStorage.setItem(`selected_document_${chatId}`, selectedDocumentId);
+    } else {
+      localStorage.removeItem(`selected_document_${chatId}`);
+    }
+  }, [selectedDocumentId, chatId]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        selectorWrapperRef.current &&
+        !selectorWrapperRef.current.contains(event.target as Node)
+      ) {
+        setShowDocumentSelector(false);
+      }
+    };
+
+    if (showDocumentSelector) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showDocumentSelector]);
 
   const showToast = (message: string, type: "success" | "info" = "info") => {
     setToast({ message, type });
@@ -201,7 +319,6 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     );
     updateMessages(updatedMessages);
 
-    // Show toast notification
     if (feedback === "liked") {
       showToast("Thanks for your feedback! 👍", "success");
     } else {
@@ -227,7 +344,6 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
 
     if (filtered.length === 0) return;
 
-    // Set files and mark that we should send them
     setPendingFiles(filtered);
     shouldSendFilesRef.current = true;
 
@@ -236,6 +352,12 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
 
   const removePendingFile = (name: string) => {
     setPendingFiles((prev) => prev.filter((f) => f.name !== name));
+  };
+
+  // >>> Save uploaded documents array to localStorage
+  const saveUploadedDocuments = (docs: UploadedDocument[]) => {
+    setUploadedDocuments(docs);
+    localStorage.setItem(`uploaded_documents_${chatId}`, JSON.stringify(docs));
   };
 
   const sendMessage = async () => {
@@ -253,7 +375,7 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     }));
 
     const userMsg: Message = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       role: "user",
       text,
       createdAt: Date.now(),
@@ -265,7 +387,7 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     setInput("");
     autoResize(true);
 
-    const botId = crypto.randomUUID();
+    const botId = generateUUID();
     const botMsg: Message = {
       id: botId,
       role: "bot",
@@ -281,7 +403,6 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
 
     try {
       if (pendingFiles.length > 0) {
-        // Check if we're uploading multiple files (more than 1)
         if (pendingFiles.length > 1) {
           const token = localStorage.getItem("token") || "";
           if (!token) {
@@ -291,14 +412,12 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
           const response = await uploadMultipleFiles(pendingFiles, token);
           if (response.documents_id) {
             localStorage.setItem(
-              "multiple_documents_id",
+              `multiple_documents_id_${chatId}`,
               response.documents_id
             );
-            localStorage.removeItem("batch_id");
-            localStorage.removeItem("dataset_id");
+            localStorage.removeItem(`dataset_id_${chatId}`);
             multipleDocumentsData = response;
 
-            // Format success message with file details
             const successFiles = response.details.filter(
               (d) => d.status === "success"
             );
@@ -327,8 +446,8 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
             responseText += `\nYou can now ask questions about these documents.`;
           }
         } else {
-          // Single file upload (existing logic)
           for (const file of pendingFiles) {
+            // Handle PDF and Word documents
             if (
               file.type === "application/pdf" ||
               file.name.endsWith(".pdf") ||
@@ -337,9 +456,27 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
             ) {
               const response = await uploadFile(file);
               if (response.pdf_id) {
-                localStorage.setItem("batch_id", response.pdf_id);
-                localStorage.removeItem("dataset_id");
-                localStorage.removeItem("multiple_documents_id");
+                // >>> Append to documents array
+                const currentDocs: UploadedDocument[] =
+                  JSON.parse(
+                    localStorage.getItem(`uploaded_documents_${chatId}`) || "[]"
+                  ) || [];
+
+                if (!currentDocs.some((d) => d.id === response.pdf_id)) {
+                  currentDocs.push({
+                    id: response.pdf_id,
+                    name: file.name,
+                    type: getDocumentType(file.name),
+                  });
+                  saveUploadedDocuments(currentDocs);
+                }
+
+                // Update selected document to the newly uploaded
+                setSelectedDocumentId(response.pdf_id);
+
+                localStorage.removeItem(`dataset_id_${chatId}`);
+                localStorage.removeItem(`multiple_documents_id_${chatId}`);
+
                 responseText =
                   `📄 Your document was uploaded successfully!\n\nNow you can ask things like:\n` +
                   `• What is the main topic of this document?\n` +
@@ -347,7 +484,9 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
                   `• What information is in the tables?\n` +
                   `• What are the main conclusions?`;
               }
-            } else if (
+            }
+            // Handle Excel and CSV files
+            else if (
               file.type === "text/csv" ||
               file.type === "application/vnd.ms-excel" ||
               file.type ===
@@ -359,24 +498,45 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
               const token = localStorage.getItem("token") || "";
               const response = await uploadExcelOrCsv(file, token);
               if (response.dataset_id) {
-                localStorage.setItem("dataset_id", response.dataset_id);
-                localStorage.removeItem("batch_id");
-                localStorage.removeItem("multiple_documents_id");
+                // >>> Store dataset_id as a document in the array (treat it like a document)
+                const currentDocs: UploadedDocument[] =
+                  JSON.parse(
+                    localStorage.getItem(`uploaded_documents_${chatId}`) || "[]"
+                  ) || [];
+
+                // Check if this dataset_id already exists
+                if (!currentDocs.some((d) => d.id === response.dataset_id)) {
+                  currentDocs.push({
+                    id: response.dataset_id,
+                    name: file.name,
+                    type: file.name.endsWith(".csv") ? "csv" : "excel",
+                  });
+                  saveUploadedDocuments(currentDocs);
+                }
+
+                // Update selected document to the newly uploaded dataset
+                setSelectedDocumentId(response.dataset_id);
+
+                localStorage.removeItem(`multiple_documents_id_${chatId}`);
+                // Keep dataset_id in localStorage for backward compatibility if needed
+                localStorage.setItem(
+                  `dataset_id_${chatId}`,
+                  response.dataset_id
+                );
+
                 excelData = response;
-                responseText = "Your dataset was uploaded successfully!";
+                responseText =
+                  "📊 Your dataset was uploaded successfully!\n\nNow you can ask things like:\n• What are the trends in this data?\n• Generate summary statistics.\n• What insights can you find?";
               }
             }
           }
         }
         setPendingFiles([]);
       } else if (text) {
-        const datasetId = localStorage.getItem("dataset_id");
-        const batchId = localStorage.getItem("batch_id");
         const multipleDocumentsId = localStorage.getItem(
-          "multiple_documents_id"
+          `multiple_documents_id_${chatId}`
         );
 
-        // Check multiple documents first, then others
         if (multipleDocumentsId) {
           const token = localStorage.getItem("token") || "";
           if (!token) {
@@ -388,14 +548,26 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
             token
           );
           responseText = answer.answer || "No answer found.";
-        } else if (datasetId) {
-          const answer = await askDataset(datasetId, text);
-          responseText = formatDatasetAnswer(answer.answer);
-        } else if (batchId) {
-          const answer = await askDocument(batchId, text);
-          responseText = answer.answer || "No answer found.";
+        } else if (selectedDocumentId) {
+          // Check if selected document is a dataset (Excel/CSV) or regular document (PDF/Word)
+          const currentDocs = uploadedDocuments;
+          const selectedDoc = currentDocs.find(
+            (doc) => doc.id === selectedDocumentId
+          );
+
+          if (
+            selectedDoc &&
+            (selectedDoc.type === "excel" || selectedDoc.type === "csv")
+          ) {
+            // Query as dataset
+            const answer = await askDataset(selectedDocumentId, text);
+            responseText = formatDatasetAnswer(answer.answer);
+          } else {
+            // Query as regular document
+            const answer = await askDocument(selectedDocumentId, text);
+            responseText = answer.answer || "No answer found.";
+          }
         } else {
-          // General chat
           const token = localStorage.getItem("token") || "";
           if (token) {
             const answer = await askGeneral(text, token);
@@ -413,7 +585,6 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
       }
     }
 
-    // start typing animation
     setIsTyping(true);
     if (typingIntervalRef.current) {
       clearInterval(typingIntervalRef.current);
@@ -489,7 +660,7 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
   ) => {
     if (!text.trim()) return;
 
-    const botId = crypto.randomUUID();
+    const botId = generateUUID();
     const botMsg: Message = {
       id: botId,
       role: "bot",
@@ -502,11 +673,10 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     let responseText = "";
 
     try {
-      const datasetId = localStorage.getItem("dataset_id");
-      const batchId = localStorage.getItem("batch_id");
-      const multipleDocumentsId = localStorage.getItem("multiple_documents_id");
+      const multipleDocumentsId = localStorage.getItem(
+        `multiple_documents_id_${chatId}`
+      );
 
-      // Check multiple documents first, then others
       if (multipleDocumentsId) {
         const token = localStorage.getItem("token") || "";
         if (!token) {
@@ -518,12 +688,25 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
           token
         );
         responseText = answer.answer || "No answer found.";
-      } else if (datasetId) {
-        const answer = await askDataset(datasetId, text);
-        responseText = formatDatasetAnswer(answer.answer);
-      } else if (batchId) {
-        const answer = await askDocument(batchId, text);
-        responseText = answer.answer || "No answer found.";
+      } else if (selectedDocumentId) {
+        // Check if selected document is a dataset (Excel/CSV) or regular document (PDF/Word)
+        const currentDocs = uploadedDocuments;
+        const selectedDoc = currentDocs.find(
+          (doc) => doc.id === selectedDocumentId
+        );
+
+        if (
+          selectedDoc &&
+          (selectedDoc.type === "excel" || selectedDoc.type === "csv")
+        ) {
+          // Query as dataset
+          const answer = await askDataset(selectedDocumentId, text);
+          responseText = formatDatasetAnswer(answer.answer);
+        } else {
+          // Query as regular document
+          const answer = await askDocument(selectedDocumentId, text);
+          responseText = answer.answer || "No answer found.";
+        }
       } else {
         const token = localStorage.getItem("token") || "";
         if (token) {
@@ -541,7 +724,6 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
       }
     }
 
-    // Typing animation (same as your sendMessage)
     setIsTyping(true);
     let index = 0;
     const interval = setInterval(() => {
@@ -577,7 +759,6 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     updateMessages(filteredMessages);
 
     // 3. Trigger assistant again with edited text
-    // (reuse sendMessage logic but adapt it to take custom text)
     reAskAssistant(id, newText, filteredMessages);
 
     setSending(true);
@@ -600,7 +781,6 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
     const { text, excelData, multipleDocumentsData } = message;
     const tableRegex = /\|(.+)\|/g;
 
-    // If we have multiple documents data, render the upload summary
     if (multipleDocumentsData) {
       const successFiles = multipleDocumentsData.details.filter(
         (d) => d.status === "success"
@@ -660,59 +840,104 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
       );
     }
 
-    // If we have Excel data, render the dataset table
     if (excelData) {
+      const { columns_list, sample_data, rows, columns } = excelData;
+
+      let sampleRows: Record<string, string | number | null>[] = [];
+
+      if (sample_data) {
+        if (Array.isArray(sample_data)) {
+          sampleRows = sample_data.slice(0, 10);
+        } else if (typeof sample_data === "object" && sample_data !== null) {
+          if (columns_list.length > 0) {
+            const firstColumn = columns_list[0];
+            const numSampleRows = sample_data[firstColumn]?.length || 0;
+
+            for (let i = 0; i < Math.min(numSampleRows, 10); i++) {
+              const row: Record<string, string | number | null> = {};
+              columns_list.forEach((col) => {
+                const columnData = sample_data[col];
+                row[col] =
+                  Array.isArray(columnData) && i < columnData.length
+                    ? columnData[i]
+                    : null;
+              });
+              sampleRows.push(row);
+            }
+          }
+        }
+      }
+
       return (
         <div className="hs-dataset-card">
           <h4>Dataset uploaded successfully!</h4>
           <p>
-            Rows: {excelData.rows} | Columns: {excelData.columns}
+            Rows: {rows} | Columns: {columns}
           </p>
           <p>
-            <strong>Columns:</strong> {excelData.columns_list.join(", ")}
+            <strong>Columns:</strong> {columns_list.join(", ")}
           </p>
 
-          <div className="hs-table-wrapper">
-            <table className="hs-table">
-              <thead>
-                <tr>
-                  {excelData.columns_list.map((col, i) => (
-                    <th key={i}>{col}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {excelData.sample_data.map((row: ExcelRow, i: number) => (
-                  <tr key={i}>
-                    {excelData.columns_list.map((col, j) => (
-                      <td key={j} data-fulltext={String(row[col] || "")}>
-                        {row[col]}
-                      </td>
+          {sampleRows.length > 0 && (
+            <div className="hs-table-wrapper">
+              <table className="hs-table">
+                <thead>
+                  <tr>
+                    {columns_list.map((col, i) => (
+                      <th key={i}>{col}</th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {sampleRows.map((row, i) => (
+                    <tr key={i}>
+                      {columns_list.map((col, j) => (
+                        <td key={j} data-fulltext={String(row[col] || "")}>
+                          {row[col]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       );
     }
 
-    if (text.includes("📄 Your document was uploaded successfully!")) {
-      const suggestions = [
-        "What is the main topic of this document?",
-        "Summarize the key findings.",
-        "What information is in the tables?",
-        "What are the main conclusions?",
-      ];
+    if (
+      text.includes("📄 Your document was uploaded successfully!") ||
+      text.includes("📊 Your dataset was uploaded successfully!")
+    ) {
+      const suggestions = text.includes("📊")
+        ? [
+            "What are the trends in this data?",
+            "Generate summary statistics.",
+            "What insights can you find?",
+            "Create a data visualization description.",
+          ]
+        : [
+            "What is the main topic of this document?",
+            "Summarize the key findings.",
+            "What information is in the tables?",
+            "What are the main conclusions?",
+          ];
 
       return (
-        <div className="hs-doc-card">
+        <div
+          className={`hs-doc-card ${
+            text.includes("📊") ? "hs-doc-card--dataset" : ""
+          }`}
+        >
           <div className="hs-doc-card__header">
             <span role="img" aria-label="document">
-              📄
+              {text.includes("📊") ? "📊" : "📄"}
             </span>
-            <h4>Document uploaded successfully!</h4>
+            <h4>
+              {text.includes("📊") ? "Dataset" : "Document"} uploaded
+              successfully!
+            </h4>
           </div>
           <p className="hs-doc-card__subtitle">You can ask questions like:</p>
 
@@ -732,14 +957,18 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
       );
     }
 
-    // ✅ If bot response contains a Markdown table, render it properly
     if (tableRegex.test(text)) {
-      const lines = text.split("\n").filter((line) => line.startsWith("|"));
-      const headers = lines[0]
+      const allLines = text.split("\n");
+      const tableLines = allLines.filter((line) => line.startsWith("|"));
+      const textLines = allLines.filter(
+        (line) => !line.startsWith("|") && line.trim() !== ""
+      );
+
+      const headers = tableLines[0]
         .split("|")
         .map((h) => h.trim())
         .filter(Boolean);
-      const rows = lines.slice(2).map((line) =>
+      const rows = tableLines.slice(2).map((line) =>
         line
           .split("|")
           .map((cell) => cell.trim())
@@ -747,32 +976,36 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
       );
 
       return (
-        <div className="hs-table-wrapper">
-          <table className="hs-table">
-            <thead>
-              <tr>
-                {headers.map((h, i) => (
-                  <th key={i}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr key={i}>
-                  {row.map((cell, j) => (
-                    <td key={j} data-fulltext={cell}>
-                      {cell}
-                    </td>
+        <div>
+          {textLines.length > 0 && (
+            <pre className="hs-text">{textLines.join("\n")}</pre>
+          )}
+
+          <div className="hs-table-wrapper">
+            <table className="hs-table">
+              <thead>
+                <tr>
+                  {headers.map((h, i) => (
+                    <th key={i}>{h}</th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <tr key={i}>
+                    {row.map((cell, j) => (
+                      <td key={j} data-fulltext={cell}>
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       );
     }
-
-    // Default: normal text
     return <pre className="hs-text">{text}</pre>;
   };
 
@@ -874,7 +1107,6 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
                       >
                         <FiDownload />
                       </button>
-                      {/* Add feedback buttons for bot messages */}
                       <button
                         className={`hs-icon-btn hs-feedback-btn ${
                           m.feedback === "liked" ? "active" : ""
@@ -931,7 +1163,16 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
             </div>
           )}
 
-          <footer className="hs-composer" aria-label="Message composer">
+          <footer
+            className="hs-composer"
+            aria-label="Message composer"
+            style={{
+              gridTemplateColumns:
+                uploadedDocuments.length > 1
+                  ? "40px 40px 1fr auto"
+                  : "40px 1fr auto",
+            }}
+          >
             <input
               ref={fileInputRef}
               type="file"
@@ -952,6 +1193,41 @@ const HomeScreenChat: React.FC<HomeScreenChatProps> = ({
             >
               <FiPaperclip />
             </button>
+
+            {uploadedDocuments.length > 1 && (
+              <div className="hs-selector-wrapper" ref={selectorWrapperRef}>
+                <button
+                  className="hs-icon-btn"
+                  onClick={() => setShowDocumentSelector((prev) => !prev)}
+                  title="Select document to query"
+                  aria-label="Select document"
+                  disabled={isTyping || sending}
+                >
+                  <FiFileText />
+                </button>
+                {showDocumentSelector && (
+                  <div className="hs-document-menu">
+                    {uploadedDocuments.map(({ id, name, type }) => (
+                      <button
+                        key={id}
+                        className={`hs-document-menu-item ${
+                          selectedDocumentId === id ? "active" : ""
+                        }`}
+                        onClick={() => {
+                          setSelectedDocumentId(id);
+                          setShowDocumentSelector(false);
+                        }}
+                      >
+                        <span className="hs-selector-icon-container">
+                          {getDocumentIcon(type)}
+                        </span>
+                        <span className="hs-document-menu-name">{name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             <textarea
               ref={textareaRef}

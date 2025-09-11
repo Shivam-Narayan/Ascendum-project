@@ -11,7 +11,8 @@ export interface ExcelUploadResponse {
   rows: number;
   columns: number;
   columns_list: string[];
-  sample_data: ExcelRow[];
+  // sample_data: ExcelRow[];
+  sample_data: Record<string, (string | number | null)[]>;  
 }
 
 export async function uploadExcelOrCsv(

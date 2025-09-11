@@ -9,8 +9,17 @@ import {
   FiTrash2,
   FiPlus,
   FiMessageSquare,
+  FiChevronDown,
+  FiChevronUp,
+  FiDatabase,
 } from "react-icons/fi";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import {
+  format,
+  isToday,
+  isYesterday,
+  differenceInCalendarDays,
+} from "date-fns";
 import "./HomeScreenSidebar.css";
 
 interface ChatSession {
@@ -24,6 +33,7 @@ const NAV_ITEMS = [
   { key: "home", label: "Home", icon: FiHome },
   { key: "profile", label: "Profile", icon: FiUser },
   { key: "settings", label: "Settings", icon: FiSettings },
+  { key: "database", label: "Database", icon:FiDatabase},
 ];
 
 interface HomeScreenSidebarProps {
@@ -51,6 +61,7 @@ const HomeScreenSidebar: React.FC<HomeScreenSidebarProps> = ({
 }) => {
   const [hsShowLogoutConfirm, setHsShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isChatHistoryCollapsed, setIsChatHistoryCollapsed] = useState(false);
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -60,9 +71,40 @@ const HomeScreenSidebar: React.FC<HomeScreenSidebarProps> = ({
     }, 500);
   };
 
-  // Sorted flat list of chats, newest first (no grouping by date)
-  const sortedChats = useMemo(() => {
-    return [...chatSessions].sort((a, b) => b.createdAt - a.createdAt);
+  // Date group label helper
+  const getDateGroupLabel = (date: Date): string => {
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+
+    const diff = differenceInCalendarDays(new Date(), date);
+    if (diff < 7) return "This Week";
+    if (diff < 14) return "Last Week";
+
+    return format(date, "MMMM d, yyyy");
+  };
+
+  // Group chats by date of creation
+  const groupedChats = useMemo(() => {
+    const withDates = chatSessions.map((chat) => ({
+      ...chat,
+      createdDate: new Date(chat.createdAt),
+    }));
+
+    // Sort by newest first
+    withDates.sort(
+      (a, b) => b.createdDate.getTime() - a.createdDate.getTime()
+    );
+
+    // Group into buckets
+    return withDates.reduce(
+      (groups: Record<string, typeof withDates>, chat) => {
+        const label = getDateGroupLabel(chat.createdDate);
+        if (!groups[label]) groups[label] = [];
+        groups[label].push(chat);
+        return groups;
+      },
+      {}
+    );
   }, [chatSessions]);
 
   // Truncate preview text
@@ -97,7 +139,9 @@ const HomeScreenSidebar: React.FC<HomeScreenSidebarProps> = ({
             onClick={createNewChat}
           >
             <FiPlus className="hs-new-chat-icon" />
-            {isSidebarOpen && <span className="hs-new-chat-label">New Chat</span>}
+            {isSidebarOpen && (
+              <span className="hs-new-chat-label">New Chat</span>
+            )}
           </button>
         </div>
 
@@ -124,32 +168,46 @@ const HomeScreenSidebar: React.FC<HomeScreenSidebarProps> = ({
           <div className="hs-chat-history">
             <div className="hs-chat-history__header">
               <h3>Chat History</h3>
+              <button
+                className="hs-chat-history__toggle"
+                onClick={() => setIsChatHistoryCollapsed(!isChatHistoryCollapsed)}
+                aria-label={isChatHistoryCollapsed ? "Expand chat history" : "Collapse chat history"}
+              >
+                {isChatHistoryCollapsed ? <FiChevronDown /> : <FiChevronUp />}
+              </button>
             </div>
-            <div className="hs-chat-history__list">
-              {sortedChats.length === 0 ? (
-                <div className="hs-no-chats">No chats yet</div>
-              ) : (
-                sortedChats.map((chat) => (
-                  <button
-                    key={chat.id}
-                    className={`hs-chat-item ${
-                      chat.id === activeChatId ? "active" : ""
-                    }`}
-                    onClick={() => setActiveChat(chat.id)}
-                  >
-                    <FiMessageSquare className="hs-chat-item__icon" />
-                    <div className="hs-chat-item__content">
-                      <div className="hs-chat-item__title">{chat.title}</div>
-                      {chat.lastMessage && (
-                        <div className="hs-chat-item__preview">
-                          {truncate(chat.lastMessage)}
-                        </div>
-                      )}
+            {!isChatHistoryCollapsed && (
+              <div className="hs-chat-history__list">
+                {Object.keys(groupedChats).length === 0 ? (
+                  <div className="hs-no-chats">No chats yet</div>
+                ) : (
+                  Object.entries(groupedChats).map(([label, chats]) => (
+                    <div key={label} className="hs-chat-group">
+                      <div className="hs-chat-group__label">{label}</div>
+                      {chats.map((chat) => (
+                        <button
+                          key={chat.id}
+                          className={`hs-chat-item ${
+                            chat.id === activeChatId ? "active" : ""
+                          }`}
+                          onClick={() => setActiveChat(chat.id)}
+                        >
+                          <FiMessageSquare className="hs-chat-item__icon" />
+                          <div className="hs-chat-item__content">
+                            <div className="hs-chat-item__title">{chat.title}</div>
+                            {chat.lastMessage && (
+                              <div className="hs-chat-item__preview">
+                                {truncate(chat.lastMessage)}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
                     </div>
-                  </button>
-                ))
-              )}
-            </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -180,7 +238,9 @@ const HomeScreenSidebar: React.FC<HomeScreenSidebarProps> = ({
         <div className="hs-logout-modal-backdrop">
           <div className="hs-logout-modal">
             <h3 className="hs-logout-modal__title">Confirm Logout</h3>
-            <p className="hs-logout-modal__text">Are you sure you want to log out?</p>
+            <p className="hs-logout-modal__text">
+              Are you sure you want to log out?
+            </p>
             <div className="hs-logout-modal__actions">
               <button
                 className="hs-btn hs-btn--ghost"
