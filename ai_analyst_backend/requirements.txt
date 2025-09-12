@@ -42,6 +42,7 @@ markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 matplotlib==3.10.3
 mdurl==0.1.2
+mongoengine==0.29.1
 mpmath==1.3.0
 mysql-connector-python==9.3.0
 mysqlclient==2.2.7

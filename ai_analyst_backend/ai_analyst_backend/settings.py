@@ -48,7 +48,8 @@ INSTALLED_APPS = [
     
     'rest_framework',
     'chatbot',
-    'corsheaders'
+    'corsheaders',
+    'chatbot1'
 ]
 
 MIDDLEWARE = [
@@ -185,3 +186,16 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# settings.py
+MONGO_URI = "mongodb://localhost:27017"
+MONGO_DBNAME = "ai_documents"
+
+# from pymongo import MongoClient
+
+# MONGO_URI = "mongodb+srv://santoshjalahalli521_db_user:<root>@cluster0.7xex5jb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+# client = MongoClient(MONGO_URI)
+# db = client["mydatabase"]
+# chunks_col = db["chunks"]
+# documents_col = db["documents"]

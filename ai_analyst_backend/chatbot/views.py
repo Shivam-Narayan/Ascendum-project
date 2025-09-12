@@ -1170,28 +1170,64 @@ def upload_multiple_documents(request):
                         chunk['source_file'] = filename
                     document_data['chunks'].extend(parsed_content['chunks'])
 
+            # elif ext in ('xls', 'xlsx', 'csv'):
+            #     file_type = 'EXCEL'
+            #     if ext == 'csv':
+            #         df = pd.read_csv(file_obj)
+            #     else:
+            #         df = pd.read_excel(file_obj)
+            #     parsed_content = {
+            #         'file_type': 'csv_qa',
+            #         'status': 'success',
+            #         'text_content': df.to_csv(index=False),
+            #         'data_summary': {
+            #             'basic_info': {
+            #                 'rows': df.shape[0],
+            #                 'column_names': list(df.columns)
+            #             }
+            #         },
+            #         'chunks': [{
+            #             'content': df.to_csv(index=False),
+            #             'source_file': filename
+            #         }]
+            #     }
+            #     document_data['chunks'].extend(parsed_content['chunks'])
+
             elif ext in ('xls', 'xlsx', 'csv'):
                 file_type = 'EXCEL'
-                if ext == 'csv':
-                    df = pd.read_csv(file_obj)
-                else:
-                    df = pd.read_excel(file_obj)
-                parsed_content = {
-                    'file_type': 'csv_qa',
-                    'status': 'success',
-                    'text_content': df.to_csv(index=False),
-                    'data_summary': {
-                        'basic_info': {
-                            'rows': df.shape[0],
-                            'column_names': list(df.columns)
-                        }
-                    },
-                    'chunks': [{
-                        'content': df.to_csv(index=False),
-                        'source_file': filename
-                    }]
-                }
-                document_data['chunks'].extend(parsed_content['chunks'])
+                try:
+                    import io
+ 
+                    if ext == 'csv':
+                        file_obj.seek(0)  # reset stream
+                        df = pd.read_csv(io.BytesIO(file_obj.read()))
+                        file_obj.seek(0)  # reset again for processor if needed
+                    else:
+                        file_obj.seek(0)
+                        df = pd.read_excel(io.BytesIO(file_obj.read()))
+                        file_obj.seek(0)
+ 
+ 
+                    # Use AdvancedCSVProcessor (same as single upload)
+                    processor = AdvancedCSVProcessor(
+                        ollama_client=AI_MODELS.get('ollama'),
+                        ollama_model=AI_MODELS.get('ollama_model', 'llama3.2')
+                    )
+                    parsed_content = processor.process_csv_fast(df, filename)
+ 
+                    # Attach filename to chunks
+                    if parsed_content.get('status') == 'success' and parsed_content.get('chunks'):
+                        for chunk in parsed_content['chunks']:
+                            chunk['source_file'] = filename
+                        document_data['chunks'].extend(parsed_content['chunks'])
+ 
+                except Exception as e:
+                    parsed_content = {
+                        'file_type': 'EXCEL',
+                        'status': 'error',
+                        'error': str(e),
+                        'filename': filename
+                    }
 
             elif ext in ('doc', 'docx'):
                 file_type = 'WORD'
