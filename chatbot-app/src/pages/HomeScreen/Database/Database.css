@@ -859,3 +859,178 @@ html, body, #root {
     gap: 4px;
   }
 }
+
+.Database-queryInput {
+  resize: vertical;
+  min-height: 44px;
+  max-height: 150px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+.Database-messageActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.Database-message:hover .Database-messageActions {
+  opacity: 1;
+}
+
+.Database-actionBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--hs-border);
+  background: var(--hs-surface);
+  color: var(--hs-muted);
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.Database-actionBtn:hover {
+  background: var(--hs-primary);
+  color: white;
+  border-color: var(--hs-primary);
+}
+
+.Database-feedbackBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--hs-border);
+  background: var(--hs-surface);
+  color: var(--hs-muted);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.Database-feedbackBtn:hover {
+  transform: scale(1.1);
+}
+
+.Database-feedbackBtn.thumbsUp:hover {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
+.Database-feedbackBtn.thumbsDown:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+.dark-theme .Database-actionBtn {
+  background: var(--hs-bg);
+  border-color: var(--hs-border);
+  color: var(--hs-muted);
+}
+
+.dark-theme .Database-actionBtn:hover {
+  background: var(--hs-primary);
+  color: white;
+  border-color: var(--hs-primary);
+}
+
+.dark-theme .Database-feedbackBtn {
+  background: var(--hs-bg);
+  border-color: var(--hs-border);
+  color: var(--hs-muted);
+}
+
+.Database-confirmModal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.Database-confirmModalContent {
+  background: var(--hs-surface);
+  padding: 24px;
+  border-radius: var(--hs-radius-lg);
+  box-shadow: var(--hs-shadow-3);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.Database-confirmModalContent h3 {
+  margin: 0 0 12px 0;
+  color: var(--hs-ink);
+  font-size: 18px;
+}
+
+.Database-confirmModalContent p {
+  margin: 0 0 24px 0;
+  color: var(--hs-muted);
+  line-height: 1.5;
+}
+
+.Database-confirmModalActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.Database-confirmModalBtn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--hs-radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: var(--transition);
+  min-width: 100px;
+}
+
+.Database-confirmModalBtn--cancel {
+  background: var(--hs-bg);
+  color: var(--hs-ink);
+  border: 1px solid var(--hs-border);
+}
+
+.Database-confirmModalBtn--cancel:hover {
+  background: var(--hs-border);
+}
+
+.Database-confirmModalBtn--confirm {
+  background: var(--hs-danger);
+  color: white;
+}
+
+.Database-confirmModalBtn--confirm:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Dark theme adjustments */
+.dark-theme .Database-confirmModalContent {
+  background: var(--hs-bg);
+  border: 1px solid var(--hs-border);
+}
+
+.dark-theme .Database-confirmModalBtn--cancel {
+  background: var(--hs-surface);
+  border-color: var(--hs-border);
+}
+
+.dark-theme .Database-confirmModalBtn--cancel:hover {
+  background: var(--hs-border);
+}

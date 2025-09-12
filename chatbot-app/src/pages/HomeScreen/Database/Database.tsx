@@ -10,6 +10,10 @@ import {
   FiChevronUp,
   FiRefreshCw,
   FiTrash2,
+  FiCopy,
+  FiDownload,
+  FiThumbsUp,
+  FiThumbsDown,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import "./Database.css";
@@ -82,6 +86,39 @@ const Database: React.FC = () => {
 
   const [isFilesCollapsed, setIsFilesCollapsed] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [showClearChatConfirm, setShowClearChatConfirm] = useState(false);
+  const [showClearFilesConfirm, setShowClearFilesConfirm] = useState(false);
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied to clipboard!");
+    } catch (err) {
+      console.error("Failed to copy: ", err);
+      toast.error("Failed to copy to clipboard");
+    }
+  };
+
+  const downloadAsTxt = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${filename}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success("Downloaded as text file!");
+  };
+
+  const handleFeedback = (isPositive: boolean) => {
+    if (isPositive) {
+      toast.success("Thanks for your positive feedback! 👍");
+    } else {
+      toast("Thanks for your feedback! We'll improve. 👎");
+    }
+  };
 
   // Convert uploaded document to DatabaseFile format
   const convertToDatabaseFile = useCallback(
@@ -91,14 +128,13 @@ const Database: React.FC = () => {
         name: doc.filename,
         type: doc.file_type.toUpperCase(),
         uploadedAt: new Date(doc.uploaded_at).toLocaleDateString(),
-        size: "Unknown size", // Backend doesn't provide size, so we use a placeholder
+        size: "Unknown size",
         documentId: doc.document_id,
       };
     },
     []
   );
 
-  // Fetch uploaded documents from backend
   // Fetch uploaded documents from backend
   const fetchUploadedDocuments = useCallback(
     async (showToast: boolean = true) => {
@@ -364,7 +400,7 @@ const Database: React.FC = () => {
 
             const newFile: DatabaseFile = {
               id:
-                Date.now().toString() + Math.random().toString(36).substr(2, 9), // More unique ID
+                Date.now().toString() + Math.random().toString(36).substr(2, 9),
               name: file.name,
               type: fileExtension.replace(".", "").toUpperCase(),
               uploadedAt: new Date().toLocaleDateString(),
@@ -483,24 +519,26 @@ const Database: React.FC = () => {
   };
 
   const clearFiles = () => {
-    if (
-      window.confirm(
-        "Are you sure you want to clear all uploaded files from this view? This will not delete them from the database."
-      )
-    ) {
-      setFiles([]);
-      setSelectedFile(null);
-      localStorage.removeItem("databaseFiles");
-      toast.success("All files cleared from view");
-    }
+    setShowClearFilesConfirm(true);
+  };
+
+  const confirmClearFiles = () => {
+    setFiles([]);
+    setSelectedFile(null);
+    localStorage.removeItem("databaseFiles");
+    setShowClearFilesConfirm(false);
+    toast.success("All files cleared from view");
   };
 
   const clearChat = () => {
-    if (window.confirm("Are you sure you want to clear the chat history?")) {
-      setMessages([]);
-      localStorage.removeItem("databaseMessages");
-      toast.success("Chat history cleared");
-    }
+    setShowClearChatConfirm(true);
+  };
+
+  const confirmClearChat = () => {
+    setMessages([]);
+    localStorage.removeItem("databaseMessages");
+    setShowClearChatConfirm(false);
+    toast.success("Chat history cleared");
   };
 
   const refreshFiles = () => {
@@ -706,6 +744,45 @@ const Database: React.FC = () => {
                     <div className="Database-messageContent">
                       {renderContentWithTables(message.content)}
                       {message.results && formatResults(message.results)}
+
+                      {/* Add action buttons for assistant messages */}
+                      {message.role === "assistant" && (
+                        <div className="Database-messageActions">
+                          <button
+                            className="Database-actionBtn"
+                            onClick={() => copyToClipboard(message.content)}
+                            title="Copy response"
+                          >
+                            <FiCopy size={12} />
+                          </button>
+                          <button
+                            className="Database-actionBtn"
+                            onClick={() =>
+                              downloadAsTxt(
+                                message.content,
+                                `response-${index + 1}`
+                              )
+                            }
+                            title="Download as text file"
+                          >
+                            <FiDownload size={12} />
+                          </button>
+                          <button
+                            className="Database-feedbackBtn thumbsUp"
+                            onClick={() => handleFeedback(true)}
+                            title="Helpful response"
+                          >
+                            <FiThumbsUp size={12} />
+                          </button>
+                          <button
+                            className="Database-feedbackBtn thumbsDown"
+                            onClick={() => handleFeedback(false)}
+                            title="Not helpful"
+                          >
+                            <FiThumbsDown size={12} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
@@ -735,10 +812,18 @@ const Database: React.FC = () => {
             {/* Query input */}
             <form className="Database-queryForm" onSubmit={handleQuerySubmit}>
               <div className="Database-inputContainer">
-                <input
-                  type="text"
+                <textarea
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && e.shiftKey) {
+                      e.preventDefault();
+                      setQuery(query + "\n");
+                    } else if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleQuerySubmit(e);
+                    }
+                  }}
                   placeholder={
                     selectedFile
                       ? `Ask about ${selectedFile}...`
@@ -746,6 +831,8 @@ const Database: React.FC = () => {
                   }
                   disabled={isLoading || isUploading || files.length === 0}
                   className="Database-queryInput"
+                  rows={1}
+                  style={{ resize: "vertical" }}
                 />
                 <button
                   type="submit"
@@ -764,6 +851,54 @@ const Database: React.FC = () => {
           </div>
         </div>
       </div>
+      {showClearChatConfirm && (
+        <div className="Database-confirmModal">
+          <div className="Database-confirmModalContent">
+            <h3>Clear Chat History</h3>
+            <p>Are you sure you want to clear the chat history?</p>
+            <div className="Database-confirmModalActions">
+              <button
+                className="Database-confirmModalBtn Database-confirmModalBtn--cancel"
+                onClick={() => setShowClearChatConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="Database-confirmModalBtn Database-confirmModalBtn--confirm"
+                onClick={confirmClearChat}
+              >
+                Clear Chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearFilesConfirm && (
+        <div className="Database-confirmModal">
+          <div className="Database-confirmModalContent">
+            <h3>Clear Files</h3>
+            <p>
+              Are you sure you want to clear all uploaded files from this view?
+              This will not delete them from the database.
+            </p>
+            <div className="Database-confirmModalActions">
+              <button
+                className="Database-confirmModalBtn Database-confirmModalBtn--cancel"
+                onClick={() => setShowClearFilesConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="Database-confirmModalBtn Database-confirmModalBtn--confirm"
+                onClick={confirmClearFiles}
+              >
+                Clear Files
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
