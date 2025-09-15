@@ -1,0 +1,291 @@
+/* Layout Container */
+.layout-container {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #fffbeb 100%);
+}
+
+/* Sidebar */
+.sidebar {
+  width: 20rem;
+  background: white;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-right: 1px solid rgba(34, 197, 94, 0.1);
+  position: relative;
+  z-index: 10;
+}
+
+.sidebar-content {
+  padding: 1.5rem;
+}
+
+/* Welcome Message */
+.welcome-message {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #dcfce7;
+  border-radius: 0.5rem;
+  border: 1px solid #bbf7d0;
+}
+
+.welcome-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #166534;
+}
+
+.welcome-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Logout Button */
+.logout-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 1rem;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.logout-button:hover {
+  color: #dc2626;
+  background-color: #fef2f2;
+}
+
+/* Navigation */
+.navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.navigation-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+  margin-top: 0;
+}
+
+/* Navigation Items */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.nav-item:hover {
+  background-color: #f9fafb;
+  color: #374151;
+}
+
+.nav-item-active {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.nav-item-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 16rem;
+  }
+  
+  .sidebar-content {
+    padding: 1rem;
+  }
+  
+  .welcome-message {
+    padding: 0.75rem;
+  }
+  
+  .nav-item {
+    padding: 0.625rem 0.75rem;
+  }
+  
+  .nav-item-label {
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-container {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .sidebar-content {
+    padding: 1rem;
+  }
+  
+  .navigation {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 0.25rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .nav-item {
+    flex-shrink: 0;
+    min-width: fit-content;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .nav-item-label {
+    display: none;
+  }
+  
+  .welcome-message {
+    margin-bottom: 1rem;
+  }
+  
+  .logout-button {
+    margin-bottom: 1rem;
+  }
+  
+  .navigation-title {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar-content {
+    padding: 0.75rem;
+  }
+  
+  .welcome-message {
+    padding: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .welcome-name {
+    font-size: 0.8125rem;
+  }
+  
+  .logout-button {
+    padding: 0.375rem 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.8125rem;
+  }
+  
+  .nav-item {
+    padding: 0.375rem 0.5rem;
+  }
+}
+
+/* Scrollbar Styling */
+.main-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.navigation::-webkit-scrollbar {
+  height: 4px;
+}
+
+.navigation::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.navigation::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+/* Scrollbar styling for webkit browsers */
+.sidebar-content::-webkit-scrollbar,
+.nav-items-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track,
+.nav-items-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb,
+.nav-items-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover,
+.nav-items-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Focus States for Accessibility */
+.nav-item:focus,
+.logout-button:focus {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+
+/* Smooth Transitions */
+.nav-item,
+.logout-button {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover Effects Enhancement */
+.nav-item:hover:not(.nav-item-active) {
+  transform: translateX(2px);
+}
+
+.logout-button:hover {
+  transform: translateX(2px);
+}

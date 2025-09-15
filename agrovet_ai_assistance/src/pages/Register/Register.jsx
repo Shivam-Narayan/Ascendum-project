@@ -11,41 +11,68 @@ const Register = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [generalError, setGeneralError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
   const navigate = useNavigate();
 
+  // Check if all required fields are filled
+  const isFormValid = name.trim() !== '' && 
+                     email.trim() !== '' && 
+                     password.trim() !== '' && 
+                     confirmPassword.trim() !== '';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setErrors({});
+    setGeneralError('');
 
+    // Client-side validation
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setErrors({ confirm_password: ['Passwords do not match'] });
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+      setErrors({ password: ['Password must be at least 6 characters long'] });
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await registerUser({ full_name: name, email, password, confirm_password: confirmPassword });
-
-      if (response?.success) {
-        // redirect to login after successful registration
-        navigate('/login');
-      } else {
-        setError(response?.message || 'Registration failed. Please try again.');
-      }
+      const response = await registerUser({ name, email, password, confirmPassword });
+      
+      setSnackbar({
+        open: true,
+        message: response.message || 'Registration successful!',
+        severity: 'success',
+      });
+      
+      // Redirect to login after successful registration
+      setTimeout(() => navigate('/login'), 2000);
+      
     } catch (error) {
-      setError('An error occurred during registration');
+      if (typeof error === 'object' && error.constructor === Object) {
+        // Handle field-specific validation errors from backend
+        setErrors(error);
+      } else {
+        // Handle general errors
+        setSnackbar({
+          open: true,
+          message: error.message || 'Registration failed. Please try again.',
+          severity: 'error',
+        });
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   return (
@@ -55,7 +82,7 @@ const Register = () => {
         <div className="header">
           <div className="header-content">
             <Leaf className="leaf-icon" />
-            <h1 className="main-title">AI Assistant for Plant and Soil</h1>
+            <h2 className="main-title">AI Assistant for Plant and Soil</h2>
           </div>
         </div>
 
@@ -63,14 +90,23 @@ const Register = () => {
         <div className="form-container">
           <h2 className="form-title">Create Your Account</h2>
           
-          {error && (
+          {generalError && (
             <div className="error-message">
               <AlertCircle size={18} />
-              <span className="error-text">{error}</span>
+              <span className="error-text">{generalError}</span>
+            </div>
+          )}
+
+          {/* Snackbar for notifications */}
+          {snackbar.open && (
+            <div className={`snackbar snackbar-${snackbar.severity}`}>
+              <span>{snackbar.message}</span>
+              <button onClick={handleCloseSnackbar} className="snackbar-close">×</button>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="form">
+            {/* Full Name */}
             <div className="form-group">
               <label htmlFor="name" className="form-label">
                 Full Name
@@ -84,8 +120,12 @@ const Register = () => {
                 className="form-input"
                 placeholder="Enter your full name"
               />
+              {errors.name && (
+                <p className="error-text">{Array.isArray(errors.name) ? errors.name[0] : errors.name}</p>
+              )}
             </div>
 
+            {/* Email */}
             <div className="form-group">
               <label htmlFor="email" className="form-label">
                 Email Address
@@ -99,8 +139,12 @@ const Register = () => {
                 className="form-input"
                 placeholder="Enter your email"
               />
+              {errors.email && (
+                <p className="error-text">{Array.isArray(errors.email) ? errors.email[0] : errors.email}</p>
+              )}
             </div>
 
+            {/* Password */}
             <div className="form-group">
               <label htmlFor="password" className="form-label">
                 Password
@@ -123,8 +167,12 @@ const Register = () => {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {errors.password && (
+                <p className="error-text">{Array.isArray(errors.password) ? errors.password[0] : errors.password}</p>
+              )}
             </div>
 
+            {/* Confirm Password */}
             <div className="form-group">
               <label htmlFor="confirmPassword" className="form-label">
                 Confirm Password
@@ -147,11 +195,14 @@ const Register = () => {
                   {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {errors.confirm_password && (
+                <p className="error-text">{Array.isArray(errors.confirm_password) ? errors.confirm_password[0] : errors.confirm_password}</p>
+              )}
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isFormValid}
               className="submit-button"
             >
               {loading ? 'Creating Account...' : 'Create Account'}
@@ -161,9 +212,9 @@ const Register = () => {
           {/* Login Link */}
           <div className="login-link">
             <p className="login-text">
-              Have an account??{' '}
+              Have an account?{' '}
               <Link to="/login" className="login-link-text">
-                login
+                Login
               </Link>
             </p>
           </div>

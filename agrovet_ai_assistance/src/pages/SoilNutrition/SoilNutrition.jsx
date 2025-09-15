@@ -93,174 +93,259 @@ const SoilNutrition = () => {
 
   const getNutrientColor = (level) => {
     switch (level) {
-      case 'High': return 'text-green-600 bg-green-100';
-      case 'Medium': return 'text-yellow-600 bg-yellow-100';
-      case 'Low': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'High': return 'nutrient-high';
+      case 'Medium': return 'nutrient-medium';
+      case 'Low': return 'nutrient-low';
+      default: return 'nutrient-default';
     }
   };
 
   const getPhColor = (ph) => {
-    if (ph < 6.0) return 'text-red-600 bg-red-100';
-    if (ph > 7.5) return 'text-blue-600 bg-blue-100';
-    return 'text-green-600 bg-green-100';
+    if (ph < 6.0) return 'ph-acidic';
+    if (ph > 7.5) return 'ph-alkaline';
+    return 'ph-neutral';
   };
 
-  return (
-    <Layout>
-      <div className="p-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center space-x-3 mb-4">
-              <TestTube className="h-8 w-8 text-amber-600" />
-              <h1 className="text-3xl font-bold text-gray-900">
-                Know Your Soil's Secrets: Unlock the Key to Plant Health
-              </h1>
-            </div>
-            <h2 className="text-xl text-amber-600 font-semibold mb-4">Analyze Your Soil Today!</h2>
-            <p className="text-gray-600 leading-relaxed mb-4">
-              Having healthy soil is the foundation of a thriving garden. But understanding complex soil test kits can be 
-              challenging. Our app simplifies the process!
-            </p>
-            <p className="text-gray-600 leading-relaxed mb-6">
-              Our "Soil pH Analysis" feature uses image recognition to analyze the color of your soil from a simple picture.
-            </p>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-              <p className="text-amber-800 text-sm">
-                Soil pH refers to how acidic or alkaline your soil is. It directly affects the nutrients available to your plants. 
-                By knowing your soil's pH, you can make informed decisions about amending your soil to create the 
-                perfect environment for your plants to flourish.
-              </p>
-            </div>
-          </div>
-
-          {/* Soil Types */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Here are the soil types we can identify:</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {soilTypes.map((type, index) => (
-                <div key={index} className="bg-white p-4 rounded-lg border border-gray-200 text-center">
-                  <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full mx-auto mb-2"></div>
-                  <span className="text-sm font-medium text-gray-700">{type}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Upload Section */}
-          <div className="mb-8">
-            <p className="text-gray-700 mb-4">Choose an image...</p>
-            <ImageUpload
-              onImageSelect={handleImageSelect}
-              onAnalyze={handleAnalyze}
-              isAnalyzing={isAnalyzing}
-            />
-          </div>
-
-          {/* Analysis Results */}
-          {analysisResult && (
-            <div className="bg-white rounded-lg border border-gray-200 shadow-lg p-6">
-              <div className="flex items-center space-x-3 mb-6">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Soil Analysis Complete</h3>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Soil Type and Visual */}
-                <div className="space-y-4">
-                  <div className="text-center p-6 rounded-lg border border-gray-200">
-                    <div 
-                      className="w-20 h-20 rounded-full mx-auto mb-4 shadow-md"
-                      style={{ backgroundColor: analysisResult.color }}
-                    ></div>
-                    <h4 className="text-lg font-semibold text-gray-900">{analysisResult.soilType}</h4>
-                    <p className="text-sm text-gray-600 mt-2">Detected soil type based on color analysis</p>
-                  </div>
-
-                  {/* pH Analysis */}
-                  <div className="p-4 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">pH Level</span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getPhColor(analysisResult.ph)}`}>
-                        {analysisResult.phStatus}
-                      </span>
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 mb-1">{analysisResult.ph}</div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-red-500 via-green-500 to-blue-500 h-2 rounded-full"
-                        style={{ width: `${((analysisResult.ph - 4) / 6) * 100}%` }}
-                      ></div>
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>4.0</span>
-                      <span>7.0</span>
-                      <span>10.0</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Detailed Analysis */}
-                <div className="space-y-4">
-                  {/* Nutrients */}
-                  <div className="p-4 rounded-lg border border-gray-200">
-                    <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
-                      <Droplets className="h-4 w-4 mr-2" />
-                      Nutrient Levels
-                    </h5>
-                    <div className="space-y-2">
-                      {Object.entries(analysisResult.nutrients).map(([nutrient, level]) => (
-                        <div key={nutrient} className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600 capitalize">{nutrient} (N)</span>
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getNutrientColor(level)}`}>
-                            {level}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Additional Metrics */}
-                  <div className="p-4 rounded-lg border border-gray-200">
-                    <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      Additional Metrics
-                    </h5>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Moisture Content</span>
-                        <span className="text-sm font-medium text-gray-900">{analysisResult.moisture}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Organic Matter</span>
-                        <span className="text-sm font-medium text-gray-900">{analysisResult.organicMatter}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recommendations */}
-              <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                <h5 className="font-semibold text-green-900 mb-3 flex items-center">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Expert Recommendations
-                </h5>
-                <ul className="space-y-2">
-                  {analysisResult.recommendations.map((rec, index) => (
-                    <li key={index} className="text-sm text-green-800 flex items-start">
-                      <div className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                      {rec}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </Layout>
+  return React.createElement(
+    Layout,
+    null,
+    React.createElement(
+      'div',
+      { className: 'soil-nutrition-container' },
+      React.createElement(
+        'div',
+        { className: 'soil-nutrition-content' },
+        React.createElement(
+          'div',
+          { className: 'soil-nutrition-header' },
+          React.createElement(
+            'div',
+            { className: 'header-title' },
+            React.createElement(TestTube, { className: 'header-icon' }),
+            React.createElement(
+              'h1',
+              { className: 'main-title' },
+              'Know Your Soil\'s Secrets: Unlock the Key to Plant Health'
+            )
+          ),
+          React.createElement(
+            'h2',
+            { className: 'sub-title' },
+            'Analyze Your Soil Today!'
+          ),
+          React.createElement(
+            'p',
+            { className: 'description-text' },
+            'Having healthy soil is the foundation of a thriving garden. But understanding complex soil test kits can be challenging. Our app simplifies the process!'
+          ),
+          React.createElement(
+            'p',
+            { className: 'description-text' },
+            'Our "Soil pH Analysis" feature uses image recognition to analyze the color of your soil from a simple picture.'
+          ),
+          React.createElement(
+            'div',
+            { className: 'info-box' },
+            React.createElement(
+              'p',
+              { className: 'info-text' },
+              'Soil pH refers to how acidic or alkaline your soil is. It directly affects the nutrients available to your plants. By knowing your soil\'s pH, you can make informed decisions about amending your soil to create the perfect environment for your plants to flourish.'
+            )
+          )
+        ),
+        React.createElement(
+          'div',
+          { className: 'soil-types-section' },
+          React.createElement(
+            'h3',
+            { className: 'section-title' },
+            'Here are the soil types we can identify:'
+          ),
+          React.createElement(
+            'div',
+            { className: 'soil-types-grid' },
+            soilTypes.map((type, index) =>
+              React.createElement(
+                'div',
+                { key: index, className: 'soil-type-card' },
+                React.createElement('div', { className: 'soil-type-icon' }),
+                React.createElement('span', { className: 'soil-type-name' }, type)
+              )
+            )
+          )
+        ),
+        React.createElement(
+          'div',
+          { className: 'upload-section' },
+          React.createElement(
+            'p',
+            { className: 'upload-instruction' },
+            'Choose an image...'
+          ),
+          React.createElement(ImageUpload, {
+            onImageSelect: handleImageSelect,
+            onAnalyze: handleAnalyze,
+            isAnalyzing: isAnalyzing
+          })
+        ),
+        analysisResult && React.createElement(
+          'div',
+          { className: 'analysis-results' },
+          React.createElement(
+            'div',
+            { className: 'results-header' },
+            React.createElement(CheckCircle, { className: 'results-icon' }),
+            React.createElement(
+              'h3',
+              { className: 'results-title' },
+              'Soil Analysis Complete'
+            )
+          ),
+          React.createElement(
+            'div',
+            { className: 'results-grid' },
+            React.createElement(
+              'div',
+              { className: 'results-left' },
+              React.createElement(
+                'div',
+                { className: 'soil-type-result' },
+                React.createElement('div', {
+                  className: 'soil-color-sample',
+                  style: { backgroundColor: analysisResult.color }
+                }),
+                React.createElement(
+                  'h4',
+                  { className: 'detected-soil-type' },
+                  analysisResult.soilType
+                ),
+                React.createElement(
+                  'p',
+                  { className: 'detection-note' },
+                  'Detected soil type based on color analysis'
+                )
+              ),
+              React.createElement(
+                'div',
+                { className: 'ph-analysis' },
+                React.createElement(
+                  'div',
+                  { className: 'ph-header' },
+                  React.createElement('span', { className: 'ph-label' }, 'pH Level'),
+                  React.createElement(
+                    'span',
+                    { className: `ph-status ${getPhColor(analysisResult.ph)}` },
+                    analysisResult.phStatus
+                  )
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'ph-value' },
+                  analysisResult.ph
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'ph-scale' },
+                  React.createElement('div', {
+                    className: 'ph-indicator',
+                    style: { width: `${((analysisResult.ph - 4) / 6) * 100}%` }
+                  })
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'ph-scale-labels' },
+                  React.createElement('span', null, '4.0'),
+                  React.createElement('span', null, '7.0'),
+                  React.createElement('span', null, '10.0')
+                )
+              )
+            ),
+            React.createElement(
+              'div',
+              { className: 'results-right' },
+              React.createElement(
+                'div',
+                { className: 'nutrients-section' },
+                React.createElement(
+                  'h5',
+                  { className: 'section-header' },
+                  React.createElement(Droplets, { className: 'section-icon' }),
+                  'Nutrient Levels'
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'nutrients-list' },
+                  Object.entries(analysisResult.nutrients).map(([nutrient, level]) =>
+                    React.createElement(
+                      'div',
+                      { key: nutrient, className: 'nutrient-item' },
+                      React.createElement(
+                        'span',
+                        { className: 'nutrient-name' },
+                        `${nutrient.charAt(0).toUpperCase() + nutrient.slice(1)} (N)`
+                      ),
+                      React.createElement(
+                        'span',
+                        { className: `nutrient-level ${getNutrientColor(level)}` },
+                        level
+                      )
+                    )
+                  )
+                )
+              ),
+              React.createElement(
+                'div',
+                { className: 'metrics-section' },
+                React.createElement(
+                  'h5',
+                  { className: 'section-header' },
+                  React.createElement(TrendingUp, { className: 'section-icon' }),
+                  'Additional Metrics'
+                ),
+                React.createElement(
+                  'div',
+                  { className: 'metrics-list' },
+                  React.createElement(
+                    'div',
+                    { className: 'metric-item' },
+                    React.createElement('span', { className: 'metric-name' }, 'Moisture Content'),
+                    React.createElement('span', { className: 'metric-value' }, `${analysisResult.moisture}%`)
+                  ),
+                  React.createElement(
+                    'div',
+                    { className: 'metric-item' },
+                    React.createElement('span', { className: 'metric-name' }, 'Organic Matter'),
+                    React.createElement('span', { className: 'metric-value' }, `${analysisResult.organicMatter}%`)
+                  )
+                )
+              )
+            )
+          ),
+          React.createElement(
+            'div',
+            { className: 'recommendations-section' },
+            React.createElement(
+              'h5',
+              { className: 'recommendations-header' },
+              React.createElement(AlertTriangle, { className: 'section-icon' }),
+              'Expert Recommendations'
+            ),
+            React.createElement(
+              'ul',
+              { className: 'recommendations-list' },
+              analysisResult.recommendations.map((rec, index) =>
+                React.createElement(
+                  'li',
+                  { key: index, className: 'recommendation-item' },
+                  React.createElement('div', { className: 'recommendation-bullet' }),
+                  rec
+                )
+              )
+            )
+          )
+        )
+      )
+    )
   );
 };
 

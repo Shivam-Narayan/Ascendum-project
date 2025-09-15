@@ -42,11 +42,11 @@
 }
 
 .main-title {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
-  font-weight: 700;
-  color: #111827;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1f2937;
   margin: 0;
+  line-height: 1.4;
 }
 
 /* Register Form */
@@ -81,6 +81,65 @@
 .error-text {
   font-size: 0.875rem;
   line-height: 1.25rem;
+}
+
+/* Snackbar Notifications */
+.snackbar {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.snackbar-success {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.snackbar-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.snackbar-info {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.snackbar-close {
+  background: none;
+  border: none;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 0.5rem;
+  color: inherit;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.snackbar-close:hover {
+  opacity: 1;
 }
 
 /* Form */
@@ -125,6 +184,53 @@
   color: #9ca3af;
 }
 
+.form-input:read-only {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Employee ID Container */
+.emp-id-container {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.emp-id-container .form-input {
+  flex: 1;
+}
+
+.know-button {
+  padding: 0.5rem 1rem;
+  background-color: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-width: fit-content;
+}
+
+.know-button:hover:not(:disabled) {
+  background-color: #15803d;
+}
+
+.know-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #16a34a, 0 0 0 4px rgba(22, 163, 74, 0.1);
+}
+
+.know-button:disabled {
+  background-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Password Container */
 .password-container {
   position: relative;
 }
@@ -170,6 +276,17 @@
   color: #4b5563;
 }
 
+/* Password Requirements */
+.password-requirements {
+  margin-top: 0.25rem;
+}
+
+.password-requirements small {
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
 /* Submit Button */
 .submit-button {
   width: 100%;
@@ -199,6 +316,30 @@
   cursor: not-allowed;
 }
 
+/* Login Link */
+.login-link {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.login-text {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.login-link-text {
+  color: #16a34a;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.login-link-text:hover {
+  color: #15803d;
+  text-decoration: underline;
+}
+
 /* Responsive Design */
 @media (max-width: 640px) {
   .main-title {
@@ -208,6 +349,15 @@
   
   .form-container {
     padding: 1.5rem;
+  }
+  
+  .emp-id-container {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .know-button {
+    width: 100%;
   }
 }
 
@@ -223,5 +373,13 @@
   
   .form-container {
     padding: 1rem;
+  }
+  
+  .emp-id-container {
+    flex-direction: column;
+  }
+  
+  .password-requirements small {
+    font-size: 0.6875rem;
   }
 }

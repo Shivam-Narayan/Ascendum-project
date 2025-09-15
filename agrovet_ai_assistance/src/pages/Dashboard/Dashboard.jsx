@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../components/Layout';
+import Layout from '../../components/Layout';
+import './Dashboard.css';
 import { 
   TestTube, 
   Sprout, 
@@ -11,7 +12,6 @@ import {
   ArrowRight,
   Leaf
 } from 'lucide-react';
-import './Dashboard.css';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -22,48 +22,48 @@ const Dashboard = () => {
       description: 'Analyze soil health and pH levels using advanced AI image recognition technology.',
       icon: TestTube,
       path: '/soil-nutrition',
-      colorClass: 'amber',
-      cardClass: 'amber'
+      color: 'amber',
+      bgColor: 'amber-bg'
     },
     {
       title: 'Plant Disease Detection',
       description: 'Identify plant diseases early and get treatment recommendations.',
       icon: Sprout,
       path: '/plant-disease',
-      colorClass: 'green',
-      cardClass: 'green'
+      color: 'green',
+      bgColor: 'green-bg'
     },
     {
       title: 'Cotton Pest Identification',
       description: 'Detect and identify common cotton pests for better crop protection.',
       icon: Bug,
       path: '/cotton-pests',
-      colorClass: 'red',
-      cardClass: 'red'
+      color: 'red',
+      bgColor: 'red-bg'
     },
     {
       title: 'Tomato Ripeness Detection',
       description: 'Determine optimal harvest time for tomatoes using visual analysis.',
       icon: Cherry,
       path: '/tomato-ripeness',
-      colorClass: 'red-orange',
-      cardClass: 'red'
+      color: 'orange',
+      bgColor: 'orange-bg'
     },
     {
       title: 'Banana Ripeness Detection',
       description: 'Assess banana ripeness levels for perfect timing and quality control.',
       icon: Apple,
       path: '/banana-ripeness',
-      colorClass: 'yellow-amber',
-      cardClass: 'yellow'
+      color: 'yellow',
+      bgColor: 'yellow-bg'
     },
     {
       title: 'Mango Ripeness Detection',
       description: 'Evaluate mango maturity with precision for optimal harvesting.',
       icon: Grape,
       path: '/mango-ripeness',
-      colorClass: 'orange-red',
-      cardClass: 'orange'
+      color: 'mango',
+      bgColor: 'mango-bg'
     }
   ];
 
@@ -75,9 +75,9 @@ const Dashboard = () => {
           <div className="hero-card">
             <div className="hero-content">
               <div className="hero-text">
-                <div className="hero-title-container">
-                  <Leaf className="leaf-icon" />
-                  <h1 className="hero-main-title">
+                <div className="hero-title-wrapper">
+                  <Leaf className="hero-leaf-icon" />
+                  <h1 className="hero-title">
                     Grow with Confidence
                   </h1>
                 </div>
@@ -90,7 +90,7 @@ const Dashboard = () => {
                   an expert in your own backyard.
                 </p>
               </div>
-              <div className="hero-image-container">
+              <div className="hero-image-wrapper">
                 <img
                   src="https://images.pexels.com/photos/1482101/pexels-photo-1482101.jpeg?auto=compress&cs=tinysrgb&w=400"
                   alt="Plant Analysis"
@@ -109,13 +109,13 @@ const Dashboard = () => {
               <div
                 key={index}
                 onClick={() => navigate(feature.path)}
-                className={`feature-card ${feature.cardClass}`}
+                className={`feature-card ${feature.bgColor} `}
               >
-                <div className="feature-card-header">
-                  <div className={`feature-icon-container ${feature.colorClass}`}>
+                <div className="feature-header">
+                  <div className={`feature-icon-wrapper ${feature.color}-gradient`}>
                     <Icon className="feature-icon" />
                   </div>
-                  <ArrowRight className="arrow-icon" />
+                  <ArrowRight className="feature-arrow" />
                 </div>
                 <h3 className="feature-title">
                   {feature.title}
@@ -128,14 +128,14 @@ const Dashboard = () => {
           })}
         </div>
 
-        {/* Additional Info */}
+        {/* Bottom CTA Section */}
         <div className="cta-section">
           <div className="cta-content">
             <h3 className="cta-title">Ready to Transform Your Agriculture Experience?</h3>
             <p className="cta-description">
               Our AI-powered tools provide instant analysis and expert recommendations to help you make informed decisions about your plants and soil.
             </p>
-            <div className="stats-container">
+            <div className="cta-stats">
               <div className="stat-item">
                 <div className="stat-number">6</div>
                 <div className="stat-label">AI Tools</div>

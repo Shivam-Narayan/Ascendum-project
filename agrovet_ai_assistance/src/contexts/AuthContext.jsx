@@ -1,74 +1,58 @@
-
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext } from 'react';
 
 const AuthContext = createContext(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState(() => {
+    // Initialize from localStorage if available
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  const login = async (email, password) => {
-    // Simulate API call
-    if (email === 'demo@example.com' && password === 'password') {
-      const userData = {
-        id: '1',
-        name: 'John Smith',
-        email: email
-      };
-      setUser(userData);
-      setIsAuthenticated(true);
-      localStorage.setItem('user', JSON.stringify(userData));
-      return true;
-    }
-    return false;
+  const login = (userData) => {
+    // Save user details in both state and localStorage
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
   };
 
-  const register = async (name, email, password) => {
-    // Simulate API call
-    const userData = {
-      id: Date.now().toString(),
-      name: name,
-      email: email
-    };
+  const register = (userData) => {
+    // Register behaves like login for demo purposes
     setUser(userData);
-    setIsAuthenticated(true);
     localStorage.setItem('user', JSON.stringify(userData));
-    return true;
   };
 
   const logout = () => {
+    // Clear user from state and localStorage
     setUser(null);
-    setIsAuthenticated(false);
     localStorage.removeItem('user');
-  };
-
-  const value = {
-    user,
-    login,
-    register,
-    logout,
-    isAuthenticated
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userType');
+    localStorage.removeItem('userEmail');
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        register,
+        logout,
+        isAuthenticated: !!user,
+        // convenient getters like second code
+        userName: user?.name || '',
+        userEmail: user?.email || '',
+        userType: user?.user_type,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

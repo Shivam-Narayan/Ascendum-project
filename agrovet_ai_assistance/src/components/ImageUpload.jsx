@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Upload, Camera, X, CheckCircle, AlertCircle } from 'lucide-react';
+import './ImageUpload.css';
 
 const ImageUpload = ({ 
   onImageSelect, 
@@ -105,27 +106,27 @@ const ImageUpload = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="image-upload-container space-y-6">
       {!selectedImage && !useWebcam && (
         <>
           <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            className={`upload-area ${
               dragActive 
-                ? 'border-green-500 bg-green-50' 
-                : 'border-gray-300 hover:border-green-400'
+                ? 'drag-active' 
+                : ''
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 mb-2">Drag and drop file here</p>
-            <p className="text-sm text-gray-400 mb-4">Limit 200MB per file • JPG, JPEG, PNG</p>
+            <Upload className="upload-icon" />
+            <p className="upload-text">Drag and drop file here</p>
+            <p className="upload-subtext">Limit 200MB per file • JPG, JPEG, PNG</p>
             
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="btn btn-primary"
             >
               Browse files
             </button>
@@ -135,12 +136,12 @@ const ImageUpload = ({
               type="file"
               accept="image/*"
               onChange={handleFileInput}
-              className="hidden"
+              className="hidden-input"
             />
           </div>
 
           {showWebcam && (
-            <div className="flex items-center space-x-3">
+            <div className="webcam-controls">
               <input
                 type="checkbox"
                 id="useWebcam"
@@ -153,9 +154,9 @@ const ImageUpload = ({
                     stopWebcam();
                   }
                 }}
-                className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                className="checkbox"
               />
-              <label htmlFor="useWebcam" className="text-sm text-gray-700 cursor-pointer flex items-center space-x-2">
+              <label htmlFor="useWebcam" className="checkbox-label">
                 <Camera size={16} />
                 <span>Use webcam</span>
               </label>
@@ -165,19 +166,19 @@ const ImageUpload = ({
       )}
 
       {useWebcam && !selectedImage && (
-        <div className="space-y-4">
-          <div className="bg-black rounded-lg overflow-hidden">
+        <div className="webcam-container space-y-4">
+          <div className="video-container">
             <video
               ref={videoRef}
               autoPlay
               playsInline
-              className="w-full h-64 object-cover"
+              className="video-element"
             />
           </div>
-          <div className="flex justify-center space-x-4">
+          <div className="webcam-button-group">
             <button
               onClick={captureImage}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+              className="btn btn-primary btn-icon"
             >
               <Camera size={16} />
               <span>Capture</span>
@@ -187,7 +188,7 @@ const ImageUpload = ({
                 setUseWebcam(false);
                 stopWebcam();
               }}
-              className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              className="btn btn-secondary"
             >
               Cancel
             </button>
@@ -196,24 +197,24 @@ const ImageUpload = ({
       )}
 
       {selectedImage && imagePreview && (
-        <div className="space-y-4">
-          <div className="relative bg-white rounded-lg border border-gray-200 p-4">
+        <div className="preview-container space-y-4">
+          <div className="preview-card">
             <button
               onClick={removeImage}
-              className="absolute top-2 right-2 p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
+              className="remove-button"
             >
               <X size={16} />
             </button>
             <img
               src={imagePreview}
               alt="Selected file preview"
-              className="w-full h-64 object-cover rounded-lg"
+              className="preview-image"
             />
-            <div className="mt-3 flex items-center justify-between">
-              <span className="text-sm text-gray-600">{selectedImage.name}</span>
-              <div className="flex items-center space-x-2 text-green-600">
+            <div className="preview-info">
+              <span className="file-name">{selectedImage.name}</span>
+              <div className="ready-indicator">
                 <CheckCircle size={16} />
-                <span className="text-sm">Ready for analysis</span>
+                <span className="ready-text">Ready for analysis</span>
               </div>
             </div>
           </div>
@@ -221,11 +222,11 @@ const ImageUpload = ({
           <button
             onClick={onAnalyze}
             disabled={isAnalyzing}
-            className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+            className="btn btn-primary btn-full-width btn-icon"
           >
             {isAnalyzing ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="loading-spinner"></div>
                 <span>Analyzing...</span>
               </>
             ) : (
