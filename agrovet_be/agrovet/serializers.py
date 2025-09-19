@@ -90,10 +90,18 @@ class LoginSerializer(serializers.Serializer):
         data["is_admin"] = getattr(user, 'is_admin', False)
         return data
 
+# serializer.py
+
 class UserActivitySerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    name = serializers.CharField(source='user.name', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    is_admin = serializers.BooleanField(source='user.is_admin', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
     class Meta:
         model = UserActivity
-        fields = ['activity_type', 'details', 'timestamp']
+        fields = ['activity_type', 'details', 'timestamp', 'user_id', 'username', 'is_admin', 'email', 'name']
+
 
 class UserDetailSerializer(serializers.ModelSerializer):
     activities = UserActivitySerializer(many=True, read_only=True)

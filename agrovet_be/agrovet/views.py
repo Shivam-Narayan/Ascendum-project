@@ -1,4 +1,4 @@
-from django.core.files.storage import default_storage
+# from django.core.files.storage import default_storage
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -8,17 +8,19 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from drf_yasg.utils import swagger_auto_schema
 from transformers import AutoImageProcessor, AutoModelForImageClassification
 from ultralytics import YOLO
-import joblib
-import os, cv2
+import os, cv2, uuid, logging, joblib
 from sklearn.cluster import KMeans
 import numpy as np
 from PIL import Image
-import logging
 from .serializers import RegisterSerializer, LoginSerializer, ErrorResponseSerializer, UserActivitySerializer
 from .models import UserActivity
 from .swagger import REGISTER_SWAGGER, LOGIN_SWAGGER, PREDICT_SWAGGER, Activity_Log_SWAGGER
 from django.utils.dateparse import parse_date
 from rest_framework.pagination import PageNumberPagination
+from PIL import Image, ImageDraw
+from django.conf import settings
+
+
 
 
 # Set up logging
@@ -40,7 +42,7 @@ MODEL_PATHS = {
     'Banana': {
         'model': r'C:\Users\pathalamm\Desktop\Agrovet_be\Ascendum_demo\agrovet_be\models\Banana.pt'
     },
-    'mango': {
+    'mango': { 
         'model': r'C:\Users\pathalamm\Desktop\Agrovet_be\Ascendum_demo\agrovet_be\models\mango.pt'
     },
     'Soil Nutrition': {
@@ -187,7 +189,6 @@ def activity_log(request):
     else:
         activities = UserActivity.objects.filter(user=user, activity_type__in=['login', 'prediction'])
 
-
     if start_date:
         start_date_obj = parse_date(start_date)
         if start_date_obj:
@@ -206,23 +207,22 @@ def activity_log(request):
             day_str = activity.timestamp.date().isoformat()
             grouped[day_str].append(UserActivitySerializer(activity).data)
 
-        result = [{'date': date, 'activities': acts} for date, acts in grouped.items()]
+        result = [{'date': date, 'activities': acts} for date, acts in sorted(grouped.items(), reverse=True)]
         return Response(result, status=status.HTTP_200_OK)
 
     # Manual Pagination Setup
     paginator = PageNumberPagination()
-    paginator.page_size = 10  # Optional: Set default page size
+    paginator.page_size = 10
     paginated_qs = paginator.paginate_queryset(activities, request)
 
     serialized = UserActivitySerializer(paginated_qs, many=True)
-
-    # Return the paginated response via paginator's built-in method
     return paginator.get_paginated_response(serialized.data)
 
 
 
 
 ####################################### Predict API #######################################
+
 
 
 @swagger_auto_schema(**PREDICT_SWAGGER)
@@ -246,117 +246,105 @@ def predict(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    if model_name in ["Plant disease", "Cotton Pests"]:
-        if 'image' not in request.FILES:
-            return Response(
-                ErrorResponseSerializer({'error': "Image file is required for this model"}).data,
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        try:
-            image_file = request.FILES['image']
-            image = Image.open(image_file).convert('RGB')
-            inputs = processor(images=image, return_tensors="pt")
-            outputs = model(**inputs)
-            probabilities = outputs.logits.softmax(dim=-1)
-            predicted_class = probabilities.argmax().item()
-            confidence = probabilities[0][predicted_class].item()
-            # Log prediction activity
-            UserActivity.objects.create(
-                user=request.user,
-                activity_type='prediction',
-                details={
-                    'model': model_name,
-                    'predicted_class': model.config.id2label[predicted_class],
-                    'confidence': confidence
-                }
-            )
-            return Response({
-                "predicted_class": model.config.id2label[predicted_class],
-                "confidence": confidence
-            }, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response(
-                ErrorResponseSerializer({'error': f"Image processing failed: {str(e)}"}).data,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    if 'image' not in request.FILES:
+        return Response(
+            ErrorResponseSerializer({'error': "At least one image file is required"}).data,
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
-    elif model_name in ["Tomato", "Banana", "mango"]:
-        if 'image' not in request.FILES:
-            return Response(
-                ErrorResponseSerializer({'error': "Image file is required for this model"}).data,
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        try:
-            image_file = request.FILES['image']
-            file_path = default_storage.save('temp.jpg', image_file)
-            results = model(file_path)
-            default_storage.delete(file_path)
-            predictions = []
-            for result in results:
-                boxes = result.boxes
-                for box in boxes:
-                    predictions.append({
-                        "class": result.names[int(box.cls)],
-                        "confidence": float(box.conf),
-                        "bbox": box.xyxy.tolist()
-                    })
-            # Log prediction activity
-            UserActivity.objects.create(
-                user=request.user,
-                activity_type='prediction',
-                details={
-                    'model': model_name,
-                    'predictions': predictions
-                }
-            )
-            return Response({"predictions": predictions}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response(
-                ErrorResponseSerializer({'error': f"Banana prediction failed: {str(e)}"}).data,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    images = request.FILES.getlist('image')
+    results_list = []
 
-    elif model_name == "Soil Nutrition":
-        if 'image' not in request.FILES:
-            return Response(
-                ErrorResponseSerializer({'error': "Image file is required for this model"}).data,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+    for image_file in images:
         try:
-            image_file = request.FILES['image']
             image = Image.open(image_file).convert('RGB')
-            image_np = np.array(image)
-            image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
-            smoothed_image = cv2.GaussianBlur(image_bgr, (5, 5), 0)
-            reshaped_image = smoothed_image.reshape((-1, 3))
-            kmeans = KMeans(n_clusters=3, random_state=0).fit(reshaped_image)
-            dominant_color = kmeans.cluster_centers_[0]
-            
-            best_regressor_model, best_classifier_model, le = model
-            regression_pred = best_regressor_model.predict([dominant_color])[0]
-            classifier_pred_proba = best_classifier_model.predict_proba([dominant_color])[0]
-            classifier_pred = np.argmax(classifier_pred_proba)
-            class_label = le.inverse_transform([classifier_pred])[0]
-            confidence = classifier_pred_proba[classifier_pred]
-            
-            # Log prediction activity
-            UserActivity.objects.create(
-                user=request.user,
-                activity_type='prediction',
-                details={
-                    'model': model_name,
-                    'regression_prediction': float(regression_pred),
-                    'classifier_prediction': class_label,
-                    'confidence': float(confidence)
-                }
-            )
-            return Response({
-                "regression_prediction": float(regression_pred),
-                "classifier_prediction": class_label,
-                "confidence": float(confidence)
-            }, status=status.HTTP_200_OK)
+
+            # ===== Plant disease / Cotton Pests =====
+            if model_name in ["Plant disease", "Cotton Pests"]:
+                inputs = processor(images=image, return_tensors="pt")
+                outputs = model(**inputs)
+                probabilities = outputs.logits.softmax(dim=-1)
+                predicted_class = probabilities.argmax().item()
+                confidence = probabilities[0][predicted_class].item()
+
+                results_list.append({
+                    "predicted_class": model.config.id2label[predicted_class],
+                    "confidence": confidence
+                })
+
+            # ===== Tomato / Banana / Mango =====
+            elif model_name in ["Tomato", "Banana", "mango"]:
+                results = model(image)  # YOLO model inference
+
+                draw = ImageDraw.Draw(image)
+                predictions = []
+                for result in results:
+                    boxes = result.boxes
+                    for box in boxes:
+                        cls_id = int(box.cls)
+                        confidence = float(box.conf)
+                        bbox = box.xyxy.tolist()[0]
+                        class_name = result.names[cls_id]
+
+                        draw.rectangle(bbox, outline='red', width=3)
+                        draw.text((bbox[0], bbox[1] - 10), f"{class_name}: {confidence:.2f}", fill='red')
+
+                        predictions.append({
+                            "class": class_name,
+                            "confidence": confidence,
+                            # "bbox": bbox
+                        })
+
+                # Save annotated image
+                save_dir = os.path.join(settings.MEDIA_ROOT, 'predictions')
+                os.makedirs(save_dir, exist_ok=True)
+                unique_filename = f"{uuid.uuid4()}.jpg"
+                save_path = os.path.join(save_dir, unique_filename)
+                image.save(save_path)
+
+                image_url = request.build_absolute_uri(settings.MEDIA_URL + f'predictions/{unique_filename}')
+
+                results_list.append({
+                    "predictions": predictions,
+                    "image_with_bboxes_url": image_url
+                })
+
+            # ===== Soil Nutrition =====
+            elif model_name == "Soil Nutrition":
+                image_np = np.array(image)
+                image_bgr = cv2.cvtColor(image_np, cv2.COLOR_RGB2BGR)
+                smoothed_image = cv2.GaussianBlur(image_bgr, (5, 5), 0)
+                reshaped_image = smoothed_image.reshape((-1, 3))
+                kmeans = KMeans(n_clusters=3, random_state=0).fit(reshaped_image)
+                dominant_color = kmeans.cluster_centers_[0]
+
+                best_regressor_model, best_classifier_model, le = model
+                regression_pred = best_regressor_model.predict([dominant_color])[0]
+                classifier_pred_proba = best_classifier_model.predict_proba([dominant_color])[0]
+                classifier_pred = np.argmax(classifier_pred_proba)
+                class_label = le.inverse_transform([classifier_pred])[0]
+                confidence = classifier_pred_proba[classifier_pred]
+
+                results_list.append({
+                    "regression_prediction": float(regression_pred),
+                    "classifier_prediction": class_label,
+                    "confidence": float(confidence)
+                })
+
         except Exception as e:
-            return Response(
-                ErrorResponseSerializer({'error': f"Image processing failed: {str(e)}"}).data,
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            results_list.append({
+                "error": f"Failed to process image '{image_file.name}': {str(e)}"
+            })
+
+    # Log prediction activity
+    UserActivity.objects.create(
+        user=request.user,
+        activity_type='prediction',
+        details={
+            'model': model_name,
+            'results': results_list
+        }
+    )
+
+    return Response({"results": results_list}, status=status.HTTP_200_OK)
+
