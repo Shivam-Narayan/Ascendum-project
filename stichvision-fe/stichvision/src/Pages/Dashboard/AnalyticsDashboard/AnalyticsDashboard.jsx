@@ -301,6 +301,11 @@ const AnalyticsDashboard = () => {
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                   <Typography variant="body1">
+                    <strong>Industry:</strong> {loginDetails.industry}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Typography variant="body1">
                     <strong>Account Created:</strong>{" "}
                     {format(parseISO(loginDetails.created_time), "PPpp")}
                   </Typography>

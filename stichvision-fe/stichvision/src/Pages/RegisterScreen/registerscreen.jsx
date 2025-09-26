@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -8,32 +8,36 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import './registerscreen.css';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import Tooltip from '@mui/material/Tooltip';
-import { fetchEmployeeDetails, registerEmployee } from '../../Services/RegisterApi';
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import "./registerscreen.css";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import Tooltip from "@mui/material/Tooltip";
+import {
+  fetchEmployeeDetails,
+  registerEmployee,
+} from "../../Services/RegisterApi";
 
 const RegisterScreen = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    empId: '',
-    name: '',
-    email: '',
-    phone: '',
-    line: '',
-    department: '',
-    password: '',
-    confirmPassword: '',
+    empId: "",
+    name: "",
+    email: "",
+    phone: "",
+    line: "",
+    department: "",
+    industry: "",
+    password: "",
+    confirmPassword: "",
   });
   const [loading, setLoading] = useState(false);
   const [userDetailsLoaded, setUserDetailsLoaded] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
+  const [passwordError, setPasswordError] = useState("");
   const [snackbar, setSnackbar] = useState({
     open: false,
-    message: '',
-    severity: 'success', // 'success', 'error', 'warning', 'info'
+    message: "",
+    severity: "success", // 'success', 'error', 'warning', 'info'
   });
 
   const handleSnackbarClose = () => {
@@ -44,7 +48,10 @@ const RegisterScreen = () => {
     const { name, value } = e.target;
 
     // Restrict password and confirmPassword to 10 characters
-    if ((name === 'password' || name === 'confirmPassword') && value.length > 10) {
+    if (
+      (name === "password" || name === "confirmPassword") &&
+      value.length > 10
+    ) {
       return;
     }
 
@@ -62,18 +69,19 @@ const RegisterScreen = () => {
         phone: data.phone_number,
         line: data.line_number,
         department: data.department,
+        industry: data.industry,
       }));
       setUserDetailsLoaded(true);
       setSnackbar({
         open: true,
-        message: 'Employee details loaded successfully',
-        severity: 'success',
+        message: "Employee details loaded successfully",
+        severity: "success",
       });
     } catch (error) {
       setSnackbar({
         open: true,
-        message: error.message || 'Failed to fetch employee details',
-        severity: 'error',
+        message: error.message || "Failed to fetch employee details",
+        severity: "error",
       });
     } finally {
       setLoading(false);
@@ -98,13 +106,13 @@ const RegisterScreen = () => {
     const isMatch = formData.password === formData.confirmPassword;
 
     if (!isPasswordValid && !isMatch) {
-      setPasswordError('Password must meet criteria and match confirmation.');
+      setPasswordError("Password must meet criteria and match confirmation.");
       return;
     }
 
     if (!isPasswordValid) {
       setPasswordError(
-        'Password must be 8–10 characters with uppercase, lowercase, number, and special character.'
+        "Password must be 8–10 characters with uppercase, lowercase, number, and special character."
       );
       return;
     }
@@ -114,25 +122,29 @@ const RegisterScreen = () => {
       return;
     }
 
-    setPasswordError('');
+    setPasswordError("");
 
     try {
       setLoading(true);
-      const response = await registerEmployee(formData.empId, formData.password, formData.confirmPassword);
-      
+      const response = await registerEmployee(
+        formData.empId,
+        formData.password,
+        formData.confirmPassword
+      );
+
       setSnackbar({
         open: true,
-        message: response.message || 'Registration successful!',
-        severity: 'success',
+        message: response.message || "Registration successful!",
+        severity: "success",
       });
-      
+
       // Redirect to login after successful registration
-      setTimeout(() => navigate('/login'), 2000);
+      setTimeout(() => navigate("/login"), 2000);
     } catch (error) {
       setSnackbar({
         open: true,
-        message: error.message || 'Registration failed. Please try again.',
-        severity: 'error',
+        message: error.message || "Registration failed. Please try again.",
+        severity: "error",
       });
     } finally {
       setLoading(false);
@@ -147,7 +159,7 @@ const RegisterScreen = () => {
         </Typography>
         <form onSubmit={handleSubmit} className="register-form">
           <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} sx={{ position: 'relative' }}>
+            <Grid item xs={12} sm={6} sx={{ position: "relative" }}>
               <TextField
                 fullWidth
                 label="Employee ID"
@@ -170,27 +182,27 @@ const RegisterScreen = () => {
                     loading
                   }
                   sx={{
-                    position: 'absolute',
+                    position: "absolute",
                     right: 8,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    height: '36px',
-                    minWidth: '80px',
-                    borderRadius: '20px',
-                    backgroundColor: '#4CAF50',
-                    '&:hover': {
-                      backgroundColor: '#45a049',
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    height: "36px",
+                    minWidth: "80px",
+                    borderRadius: "20px",
+                    backgroundColor: "#4CAF50",
+                    "&:hover": {
+                      backgroundColor: "#45a049",
                     },
-                    '&:disabled': {
-                      backgroundColor: '#cccccc',
-                      color: '#666666',
+                    "&:disabled": {
+                      backgroundColor: "#cccccc",
+                      color: "#666666",
                     },
                   }}
                 >
                   {loading ? (
-                    <CircularProgress size={24} sx={{ color: 'white' }} />
+                    <CircularProgress size={24} sx={{ color: "white" }} />
                   ) : (
-                    'Know'
+                    "Know"
                   )}
                 </Button>
               )}
@@ -265,9 +277,22 @@ const RegisterScreen = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
+                label="Industry"
+                variant="outlined"
+                name="industry"
+                value={formData.industry}
+                onChange={handleChange}
+                className="register-input"
+                disabled
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
                 label="Password"
                 variant="outlined"
-                type="text"  // Changed from 'text' to 'password' for security
+                type="text" // Changed from 'text' to 'password' for security
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
@@ -282,7 +307,7 @@ const RegisterScreen = () => {
                 fullWidth
                 label="Confirm Password"
                 variant="outlined"
-                type="text"  // Changed from 'text' to 'password' for security
+                type="text" // Changed from 'text' to 'password' for security
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
@@ -293,15 +318,23 @@ const RegisterScreen = () => {
             </Grid>
 
             {passwordError && (
-              <Grid item xs={12} style={{ display: 'flex', alignItems: 'center' }}>
-                <Typography variant="body2" color="error" style={{ marginRight: '8px' }}>
+              <Grid
+                item
+                xs={12}
+                style={{ display: "flex", alignItems: "center" }}
+              >
+                <Typography
+                  variant="body2"
+                  color="error"
+                  style={{ marginRight: "8px" }}
+                >
                   {passwordError}
                 </Typography>
                 <Tooltip
                   title={
-                    <div style={{ fontSize: '0.9rem' }}>
+                    <div style={{ fontSize: "0.9rem" }}>
                       Password must contain:
-                      <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                      <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
                         <li>1 uppercase letter</li>
                         <li>1 lowercase letter</li>
                         <li>1 number</li>
@@ -313,7 +346,9 @@ const RegisterScreen = () => {
                   arrow
                   placement="right"
                 >
-                  <InfoOutlinedIcon style={{ cursor: 'pointer', color: '#f44336' }} />
+                  <InfoOutlinedIcon
+                    style={{ cursor: "pointer", color: "#f44336" }}
+                  />
                 </Tooltip>
               </Grid>
             )}
@@ -327,14 +362,18 @@ const RegisterScreen = () => {
             sx={{ mt: 3 }}
             disabled={!userDetailsLoaded || loading}
           >
-            {loading ? <CircularProgress size={24} color="inherit" /> : 'Register'}
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              "Register"
+            )}
           </Button>
 
           <Typography className="register-login-text">
             Already have an account?
             <Button
               variant="text"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate("/login")}
               className="register-login-button"
             >
               Login
@@ -347,12 +386,12 @@ const RegisterScreen = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleSnackbarClose}
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>

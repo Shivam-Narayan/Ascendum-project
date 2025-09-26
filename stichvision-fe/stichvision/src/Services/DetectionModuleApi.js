@@ -9,7 +9,7 @@ export const uploadImagesForDetection = async (token, imageFiles) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}seamguard/detection/image`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/detection/image/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -56,7 +56,7 @@ export const uploadVideoForDetection = async (token, videoFile) => {
   formData.append('video', videoFile);
 
   try {
-    const response = await fetch(`${API_BASE_URL}seamguard/detection/video`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/detection/video/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

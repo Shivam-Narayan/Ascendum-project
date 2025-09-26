@@ -1,25 +1,4 @@
-import axios from "axios";
-
-const API_BASE = "http://localhost:8000/seamguard";
-
-// Create an axios instance with default config
-const apiClient = axios.create({
-  baseURL: API_BASE,
-});
-
-// Add request interceptor to include the auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+import API_BASE_URL from "../config";
 
 const LiveDetectionApi = {
   /**
@@ -27,8 +6,22 @@ const LiveDetectionApi = {
    * @returns {Promise<string>}
    */
   getLiveBatchId: async () => {
-    const response = await apiClient.get("/detection/generate_batch_id/");
-    return response.data.batch_id;
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${API_BASE_URL}seamguard/detection/generate_batch_id/`, {
+      method: "GET",
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || "Failed to generate batch ID");
+    }
+
+    const data = await res.json();
+    return data.batch_id;
   },
 
   /**
@@ -38,11 +31,27 @@ const LiveDetectionApi = {
    * @returns {Promise<Object>}
    */
   detectDefectLive: async (batchId, base64Image) => {
-    const response = await apiClient.post("/detection/detect_defect_live", {
-      batch_id: batchId,
-      image: base64Image,
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${API_BASE_URL}seamguard/detection/detect_defect_live/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+      body: JSON.stringify({
+        batch_id: batchId,
+        image: base64Image,
+      }),
     });
-    return response.data;
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || "Failed to detect defect");
+    }
+
+    const data = await res.json();
+    return data;
   },
 
   /**
@@ -51,10 +60,25 @@ const LiveDetectionApi = {
    * @returns {Promise<Object>}
    */
   stopLiveDetection: async (batchId) => {
-    const response = await apiClient.get("/detection/stop_live_detection/", {
-      params: { batch_id: batchId },
+    const token = localStorage.getItem("token");
+
+    const url = new URL(`${API_BASE_URL}seamguard/detection/stop_live_detection/`);
+    url.searchParams.append("batch_id", batchId);
+
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "",
+      },
     });
-    return response.data;
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || "Failed to stop live detection");
+    }
+
+    const data = await res.json();
+    return data;
   },
 };
 

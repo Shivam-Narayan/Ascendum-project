@@ -110,11 +110,7 @@ const Dashboard = () => {
         {/* Sidebar */}
         <Box className="sidebar">
           <Box className="sidebar-title">
-            <img
-              src="/logo.ico"
-              alt="Company Logo"
-              className="sidebar-logo"
-            />
+            <img src="/logo.ico" alt="Company Logo" className="sidebar-logo" />
             <Typography variant="h5">Seam Guard</Typography>
           </Box>
 
@@ -175,7 +171,9 @@ const Dashboard = () => {
               logged into line number{" "}
               <span className="color-line">{userData.line_number}</span> in{" "}
               <span className="color-dept">{userData.department}</span>{" "}
-              department.
+              department of{" "}
+              <span className="color-industry">{userData.industry}</span>{" "}
+              industry.
             </Typography>
           </Box>
           <Box className="dashboard-inner-content">{renderSection()}</Box>

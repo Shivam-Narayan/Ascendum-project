@@ -8,7 +8,7 @@ export const fetchUsers = async () => {
       throw new Error("No authentication token found");
     }
 
-    const response = await fetch(`${API_BASE_URL}seamguard/admin/users/list`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/admin/users/list/`, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -39,7 +39,7 @@ export const deleteUser = async (empId) => {
       throw new Error("No authentication token found");
     }
 
-    const response = await fetch(`${API_BASE_URL}seamguard/admin/users/${empId}/delete`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/admin/users/${empId}/delete/`, {
       method: "DELETE",
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -64,7 +64,7 @@ export const deleteUser = async (empId) => {
 // Fetch Admin Analytics
 export const fetchAdminAnalytics = async (token) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/seamguard/admin/users/all`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/admin/users/all/`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -88,7 +88,7 @@ export const fetchUserReports = async (employeeId, token) => {
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/seamguard/admin/seamguard/admin/user/${employeeId}/`,
+    `${API_BASE_URL}seamguard/admins/users/${employeeId}/`,
     {
       method: "GET",
       headers: {

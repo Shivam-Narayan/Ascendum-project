@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import { Logout } from "@mui/icons-material";
 import "./AdminDashboard.css";
-
-// Import the 3 sections
 import UserManagement from "./UserManagement/UserManagement";
 import AdminReports from "./AdminReports/AdminReports";
 import AdminAnalytics from "./AdminAnalytics/AdminAnalytics";
+import AdminTrainModel from "./AdminTrainModel/AdminTrainModel";
 
 function AdminDashboard() {
   const adminUser = JSON.parse(localStorage.getItem("adminUser"));
@@ -25,6 +24,8 @@ function AdminDashboard() {
         return <AdminReports />;
       case "analytics":
         return <AdminAnalytics />;
+      case "train":
+        return <AdminTrainModel />;
       default:
         return <UserManagement />;
     }
@@ -40,9 +41,7 @@ function AdminDashboard() {
               {adminUser?.emp_id || "ADMIN123"}
             </span>
             , you have logged into{" "}
-            <span className="adminDashboard-highlightPortal">
-              Admin Portal
-            </span>
+            <span className="adminDashboard-highlightPortal">Admin Portal</span>
           </p>
         </div>
 
@@ -69,6 +68,12 @@ function AdminDashboard() {
           onClick={() => setActiveTab("analytics")}
         >
           <h2>Analytics</h2>
+        </div>
+        <div
+          className="adminDashboard-card adminDashboard-trainModel"
+          onClick={() => setActiveTab("train")}
+        >
+          <h2>Train Model</h2>
         </div>
       </main>
 

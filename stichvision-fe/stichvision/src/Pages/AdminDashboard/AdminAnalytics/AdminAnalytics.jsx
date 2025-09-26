@@ -131,25 +131,25 @@ function AdminAnalytics() {
       {/* Summary Cards */}
       <div className="adminAnalytics-summary-cards">
         <div className="adminAnalytics-summary-card adminAnalytics-detection-card">
-          <div className="adminAnalytics-card-icon">🔍</div>
+          <div className="adminAnalytics-card-icon"></div>
           <h3>Total Detections</h3>
           <p className="adminAnalytics-stat-number">{totalDetections}</p>
           <span className="adminAnalytics-stat-label">Today</span>
         </div>
         <div className="adminAnalytics-summary-card adminAnalytics-annotation-card">
-          <div className="adminAnalytics-card-icon">✏️</div>
+          <div className="adminAnalytics-card-icon"></div>
           <h3>Total Annotations</h3>
           <p className="adminAnalytics-stat-number">{totalAnnotations}</p>
           <span className="adminAnalytics-stat-label">All Time</span>
         </div>
         <div className="adminAnalytics-summary-card adminAnalytics-login-card">
-          <div className="adminAnalytics-card-icon">👤</div>
+          <div className="adminAnalytics-card-icon"></div>
           <h3>Total Logins</h3>
           <p className="adminAnalytics-stat-number">{totalLogins}</p>
           <span className="adminAnalytics-stat-label">All Time</span>
         </div>
         <div className="adminAnalytics-summary-card adminAnalytics-defect-card">
-          <div className="adminAnalytics-card-icon">⚠️</div>
+          <div className="adminAnalytics-card-icon"></div>
           <h3>Defects Identified</h3>
           <p className="adminAnalytics-stat-number">{totalDefects}</p>
           <span className="adminAnalytics-stat-label">Today</span>

@@ -2,7 +2,7 @@ import API_BASE_URL from '../config';
 
 export const loginUser = async (credentials) => {
   try {
-    const response = await fetch(`${API_BASE_URL}seamguard/login`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/login/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

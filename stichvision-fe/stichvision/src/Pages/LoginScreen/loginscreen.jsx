@@ -22,6 +22,7 @@ const LoginScreen = () => {
     identifier: "",
     line_number: "",
     department: "",
+    industry: "",
     password: "",
   });
   const [loading, setLoading] = useState(false);
@@ -123,6 +124,36 @@ const LoginScreen = () => {
                 </MenuItem>
               )
             )}
+          </TextField>
+
+          <TextField
+            fullWidth
+            select
+            label="Industry"
+            variant="outlined"
+            name="industry"
+            value={formData.industry}
+            onChange={handleChange}
+            className="login-input"
+            required
+          >
+            {[
+              "Glass",
+              "Iron & Steel",
+              "FMCG",
+              "IT Hardware",
+              "Automobiles",
+              "Apparels",
+              "Textiles",
+              "Furnitures",
+              "Leather",
+              "Fabricated Metals",
+              "CAD",
+            ].map((ind) => (
+              <MenuItem key={ind} value={ind}>
+                {ind}
+              </MenuItem>
+            ))}
           </TextField>
 
           <TextField

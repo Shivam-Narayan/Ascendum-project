@@ -15,7 +15,7 @@ export const fetchEmployeeDetails = async (empId) => {
 
 export const registerEmployee = async (empId, password, confirmPassword) => {
   try {
-    const response = await fetch(`${API_BASE_URL}seamguard/register`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/register/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

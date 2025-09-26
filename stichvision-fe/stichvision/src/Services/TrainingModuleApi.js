@@ -7,7 +7,7 @@ export const uploadImages = async (files, token) => {
   });
 
   try {
-    const response = await fetch(`${API_BASE_URL}seamguard/training/upload-image`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/training/upload-image/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
@@ -28,7 +28,7 @@ export const uploadImages = async (files, token) => {
 
 export const saveAnnotations = async (imageId, annotations, token) => {
   try {
-    const response = await fetch(`${API_BASE_URL}seamguard/training/save-annotations`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/training/save-annotations/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -59,7 +59,7 @@ export const saveAnnotations = async (imageId, annotations, token) => {
 
 export const trainModel = async (epochs, token) => {
   try {
-    const response = await fetch(`${API_BASE_URL}seamguard/training/train-model`, {
+    const response = await fetch(`${API_BASE_URL}seamguard/training/train-model/`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
