@@ -3,8 +3,11 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Dashboard, DashboardImage, Annotation, DetectionResult, LoginHistory, User
-from .serializers import LoginSerializer, DashboardSerializer, ErrorResponseSerializer, EmployeeMasterSerializer, RegisterUserFromEmpIDSerializer, UserSerializer
-from django.http import JsonResponse, StreamingHttpResponse
+from .serializers import (
+    LoginSerializer, DashboardSerializer, ErrorResponseSerializer,
+    EmployeeMasterSerializer, RegisterUserFromEmpIDSerializer, UserSerializer
+)
+from django.http import JsonResponse
 from django.db import connection
 from rest_framework.parsers import MultiPartParser, FormParser
 from drf_yasg.utils import swagger_auto_schema
@@ -18,25 +21,24 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.exceptions import AuthenticationFailed
 from django.utils.dateparse import parse_date
-from rest_framework_simplejwt.tokens import UntypedToken
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-import uuid
 from collections import Counter
 import base64
 import redis
 import numpy as np
+import yaml
+
 # Initialize Redis client
 redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-
-
 # Configure logging
 logger = logging.getLogger(__name__)
-model = YOLO(r"C:\Users\Arun.k\seamguard\seamguard-be\best 6.pt")  
+model = YOLO(r"C:\Users\pathalamm\Desktop\Seamguard_be\best.pt")
 
-# MODEL_PATH = os.path.join(settings.BASE_DIR, "best.pt")
-# model = YOLO(MODEL_PATH)
-
+# Industry list
+industries = [
+    "Glass", "Iron & Steel", "FMCG", "IT Hardware", "Automobiles",
+    "Apparels", "Textiles", "Furnitures", "Leather", "Fabricated Metals", "CAD"
+]
 
 class DashboardUser:
     """Wrapper class to add authentication attributes to Dashboard model"""
@@ -58,7 +60,6 @@ class DashboardUser:
     def is_admin(self):
         return False
 
-
 class AdminUser:
     """Wrapper class for admin users"""
     def __init__(self, emp_id):
@@ -66,7 +67,6 @@ class AdminUser:
         self.is_authenticated = True
         self.is_anonymous = False
         self.is_admin = True
-
 
 class DashboardJWTAuthentication(JWTAuthentication):
     """
@@ -101,7 +101,6 @@ class DashboardJWTAuthentication(JWTAuthentication):
         except Exception as e:
             raise AuthenticationFailed(str(e))
 
-
 def load_admins():
     admins_path = os.path.join(settings.BASE_DIR, 'admins.json')
     if os.path.exists(admins_path):
@@ -109,9 +108,7 @@ def load_admins():
             return json.load(f)
     return []
 
-
-################## employee info by emp_Id (API) ####################
-
+################## Employee Info by emp_id (API) ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="Get employee info by emp_id",
@@ -137,7 +134,10 @@ def get_employee_info(request, emp_id):
         return Response(ErrorResponseSerializer({'error': 'emp_id is required'}).data, status=status.HTTP_400_BAD_REQUEST)
  
     with connection.cursor() as cursor:
-        cursor.execute("SELECT emp_id, name, line_number, department, phone_number, email FROM seamguard_employeemaster WHERE emp_id = %s", [emp_id])
+        cursor.execute(
+            "SELECT emp_id, name, line_number, department, phone_number, email, industry FROM seamguard_employeemaster WHERE emp_id = %s",
+            [emp_id]
+        )
         row = cursor.fetchone()
         if row:
             emp_data = {
@@ -147,16 +147,14 @@ def get_employee_info(request, emp_id):
                 "department": row[3],
                 "phone_number": row[4],
                 "email": row[5],
+                "industry": row[6]
             }
             return JsonResponse(emp_data, status=200)
         return Response(ErrorResponseSerializer({'error': 'Employee not found'}).data, status=status.HTTP_404_NOT_FOUND)
 
-
-
-################## register API ####################
-
+################## Register API ####################
 @swagger_auto_schema(
-    method='post', 
+    method='post',
     request_body=RegisterUserFromEmpIDSerializer,
     responses={
         201: openapi.Response(
@@ -167,7 +165,8 @@ def get_employee_info(request, emp_id):
                     'emp_id': openapi.Schema(type=openapi.TYPE_STRING),
                     'name': openapi.Schema(type=openapi.TYPE_STRING),
                     'email': openapi.Schema(type=openapi.TYPE_STRING),
-                    'phone_number': openapi.Schema(type=openapi.TYPE_STRING)
+                    'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
+                    'industry': openapi.Schema(type=openapi.TYPE_STRING)
                 }
             )
         ),
@@ -186,7 +185,9 @@ def register_by_emp_id(request):
             email=user.email,
             phone_number=user.phone_number,
             line_number=user.line_number,
-            department=user.department
+            department=user.department,
+            industry=user.industry,  # Use industry from user
+            password=user.password
         )
         return Response({
             "message": "User registered successfully",
@@ -194,15 +195,13 @@ def register_by_emp_id(request):
                 "emp_id": user.emp_id,
                 "name": user.name,
                 "email": user.email,
-                "phone_number": user.phone_number
+                "phone_number": user.phone_number,
+                "industry": user.industry
             }
         }, status=status.HTTP_201_CREATED)
     return Response(ErrorResponseSerializer({'error': serializer.errors}).data, status=status.HTTP_400_BAD_REQUEST)
 
-
-
 ################## Login API ####################
-
 @swagger_auto_schema(
     method='post',
     request_body=LoginSerializer,
@@ -223,6 +222,7 @@ def register_by_emp_id(request):
                             'phone_number': openapi.Schema(type=openapi.TYPE_STRING),
                             'line_number': openapi.Schema(type=openapi.TYPE_STRING),
                             'department': openapi.Schema(type=openapi.TYPE_STRING),
+                            'industry': openapi.Schema(type=openapi.TYPE_STRING)
                         }
                     )
                 }
@@ -256,9 +256,7 @@ def login(request):
         'user': DashboardSerializer(dashboard_user).data
     }, status=status.HTTP_200_OK)
 
-
 ################## Admin Login API ####################
-
 @swagger_auto_schema(
     method='post',
     operation_summary="Admin login",
@@ -307,10 +305,7 @@ def admin_login(request):
         'emp_id': emp_id
     }, status=status.HTTP_200_OK)
 
-
-
-################## upload_user_image API ####################
-
+################## Upload User Image API ####################
 @swagger_auto_schema(
     method='post',
     manual_parameters=[
@@ -337,7 +332,8 @@ def admin_login(request):
                             properties={
                                 'image_id': openapi.Schema(type=openapi.TYPE_INTEGER),
                                 'image_url': openapi.Schema(type=openapi.TYPE_STRING),
-                                'image_name': openapi.Schema(type=openapi.TYPE_STRING)
+                                'image_name': openapi.Schema(type=openapi.TYPE_STRING),
+                                'industry': openapi.Schema(type=openapi.TYPE_STRING)
                             }
                         )
                     )
@@ -355,48 +351,48 @@ def admin_login(request):
 @permission_classes([IsAuthenticated])
 @parser_classes([MultiPartParser, FormParser])
 def upload_user_image(request):
-    images = request.FILES.getlist('images')  # Support multiple images
-
+    images = request.FILES.getlist('images')
     if not images:
         return Response(ErrorResponseSerializer({'error': 'At least one image is required'}).data, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         dashboard_user = request.user.dashboard_obj
         emp_id = dashboard_user.emp_id
+        industry = dashboard_user.industry
+        if not industry:
+            return Response(ErrorResponseSerializer({'error': 'User must have an industry assigned'}).data, status=status.HTTP_400_BAD_REQUEST)
 
         uploaded_images = []
         for image in images:
-            # Save each image to DashboardImage
             dashboard_image = DashboardImage.objects.create(
                 dashboard_user=dashboard_user,
                 emp_id=emp_id,
-                image=image
+                image=image,
+                industry=industry
             )
 
-            # Verify image exists
             image_path = os.path.normpath(os.path.join(settings.MEDIA_ROOT, dashboard_image.image.name)).replace('\\', '/')
             logger.debug(f"Saving image to: {image_path}")
             if not os.path.exists(image_path):
                 logger.error(f"Failed to save image: {image_path}")
-                dashboard_image.delete()  # Clean up invalid entry
+                dashboard_image.delete()
                 continue
 
-            # Verify image is readable
             img = cv2.imread(image_path)
             if img is None:
                 logger.error(f"Failed to read image: {image_path}")
-                dashboard_image.delete()  # Clean up invalid entry
+                dashboard_image.delete()
                 continue
 
-            # Generate image URL and name
             image_url = request.build_absolute_uri(dashboard_image.image.url)
             image_name = dashboard_image.image.name
             uploaded_images.append({
                 'image_id': dashboard_image.id,
                 'image_url': image_url,
-                'image_name': image_name
+                'image_name': image_name,
+                'industry': industry
             })
-            logger.info(f"Image uploaded successfully: image_id={dashboard_image.id}, url={image_url}, name={image_name}")
+            logger.info(f"Image uploaded successfully: image_id={dashboard_image.id}, url={image_url}, name={image_name}, industry={industry}")
 
         if not uploaded_images:
             return Response(ErrorResponseSerializer({'error': 'No valid images uploaded'}).data, status=status.HTTP_400_BAD_REQUEST)
@@ -412,10 +408,7 @@ def upload_user_image(request):
         logger.error(f"Error uploading images for emp_id {emp_id}: {str(e)}")
         return Response(ErrorResponseSerializer({'error': str(e)}).data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
 ################## Annotation API ####################
-
 @swagger_auto_schema(
     method='post',
     request_body=openapi.Schema(
@@ -468,10 +461,10 @@ def save_annotations(request):
         return Response(ErrorResponseSerializer({'error': 'image_id and annotations are required'}).data, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        image = DashboardImage.objects.get(id=image_id)
+        image = DashboardImage.objects.get(id=image_id, dashboard_user=user.dashboard_obj)
     except DashboardImage.DoesNotExist:
         logger.error(f"Image not found for image_id: {image_id}")
-        return Response(ErrorResponseSerializer({'error': 'Image not found'}).data, status=status.HTTP_404_NOT_FOUND)
+        return Response(ErrorResponseSerializer({'error': 'Image not found or not authorized'}).data, status=status.HTTP_404_NOT_FOUND)
 
     try:
         for ann in annotations:
@@ -485,19 +478,16 @@ def save_annotations(request):
                 x_min=float(ann['x_min']),
                 y_min=float(ann['y_min']),
                 x_max=float(ann['x_max']),
-                y_max=float(ann['y_max'])
+                y_max=float(ann['y_max']),
+                industry=image.industry
             )
-        logger.info(f"Saved {len(annotations)} annotations for image_id: {image_id}")
+        logger.info(f"Saved {len(annotations)} annotations for image_id: {image_id}, industry: {image.industry}")
         return Response({'message': 'Annotations saved successfully'}, status=status.HTTP_200_OK)
     except Exception as e:
         logger.error(f"Error saving annotations for image_id {image_id}: {str(e)}")
         return Response(ErrorResponseSerializer({'error': str(e)}).data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
-#################### Train_model API ####################
-
-
+################## Train Model API ####################
 @swagger_auto_schema(
     method='post',
     request_body=openapi.Schema(
@@ -540,45 +530,43 @@ def train_model(request):
     try:
         dashboard_user = request.user.dashboard_obj
         emp_id = dashboard_user.emp_id
-        logger.info(f"Starting dataset preparation for user: {emp_id}")
+        industry = dashboard_user.industry
+        if not industry:
+            return Response(ErrorResponseSerializer({'error': 'User must have an industry assigned'}).data, status=status.HTTP_400_BAD_REQUEST)
+        
+        logger.info(f"Starting dataset preparation for user: {emp_id}, industry: {industry}")
         try:
-            epochs = int(request.data.get('epochs', 10))  # Keep epochs for compatibility, though not used
+            epochs = int(request.data.get('epochs', 10))
         except ValueError:
             logger.error(f"Invalid epochs value: {request.data.get('epochs')}")
             return Response(ErrorResponseSerializer({'error': 'epochs must be an integer'}).data, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get annotations for the authenticated user
-        annotations = Annotation.objects.filter(user=dashboard_user)
+        annotations = Annotation.objects.filter(user=dashboard_user, industry=industry)
         if not annotations:
-            logger.error(f"No annotations found for user: {emp_id}")
-            return Response(ErrorResponseSerializer({'error': 'No annotations found for user'}).data, status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f"No annotations found for user: {emp_id}, industry: {industry}")
+            return Response(ErrorResponseSerializer({'error': 'No annotations found for user in this industry'}).data, status=status.HTTP_400_BAD_REQUEST)
 
-        # Create a unique directory for the user's dataset
         user_folder = os.path.normpath(os.path.join(settings.MEDIA_ROOT, 'yolo_datasets', emp_id, str(uuid.uuid4()))).replace('\\', '/')
         os.makedirs(user_folder, exist_ok=True)
 
-        # Prepare YOLO dataset structure
         train_images_dir = os.path.normpath(os.path.join(user_folder, 'images', 'train')).replace('\\', '/')
         train_labels_dir = os.path.normpath(os.path.join(user_folder, 'labels', 'train')).replace('\\', '/')
         os.makedirs(train_images_dir, exist_ok=True)
         os.makedirs(train_labels_dir, exist_ok=True)
 
-        # Get unique class names and images
         class_names = sorted(set(ann.class_name for ann in annotations))
         class_to_id = {name: idx for idx, name in enumerate(class_names)}
         image_ids = set(ann.image_id for ann in annotations)
-        logger.info(f"Found {len(image_ids)} unique images and {len(class_names)} classes for user {emp_id}")
+        logger.info(f"Found {len(image_ids)} unique images and {len(class_names)} classes for user {emp_id}, industry {industry}")
 
-        # Copy images and create label files
         valid_images = []
-        for image in DashboardImage.objects.filter(id__in=image_ids):
+        for image in DashboardImage.objects.filter(id__in=image_ids, industry=industry):
             image_path = os.path.normpath(os.path.join(settings.MEDIA_ROOT, image.image.name)).replace('\\', '/')
             logger.debug(f"Processing image: {image_path} (image_id: {image.id})")
             if not os.path.exists(image_path):
                 logger.warning(f"Image not found: {image_path} (image_id: {image.id})")
                 continue
 
-            # Verify image is readable
             img = cv2.imread(image_path)
             if img is None:
                 logger.warning(f"Failed to read image: {image_path} (image_id: {image.id})")
@@ -588,7 +576,6 @@ def train_model(request):
                 logger.warning(f"Invalid image dimensions for {image_path} (image_id: {image.id})")
                 continue
 
-            # Copy image to dataset
             dest_image_path = os.path.normpath(os.path.join(train_images_dir, f"{image.id}.jpg")).replace('\\', '/')
             try:
                 shutil.copyfile(image_path, dest_image_path)
@@ -599,7 +586,6 @@ def train_model(request):
                 logger.warning(f"Error copying image {image_path} (image_id: {image.id}): {str(e)}")
                 continue
 
-            # Create YOLO label file
             label_path = os.path.normpath(os.path.join(train_labels_dir, f"{image.id}.txt")).replace('\\', '/')
             try:
                 with open(label_path, 'w') as f:
@@ -608,7 +594,6 @@ def train_model(request):
                         logger.warning(f"No annotations found for image_id: {image.id}")
                         continue
                     for ann in image_annotations:
-                        # Convert to YOLO format: <class_id> <x_center> <y_center> <width> <height> (normalized)
                         x_center = (ann.x_min + ann.x_max) / 2 / img_width
                         y_center = (ann.y_min + ann.y_max) / 2 / img_height
                         width = (ann.x_max - ann.x_min) / img_width
@@ -625,12 +610,11 @@ def train_model(request):
                 continue
 
         if not valid_images:
-            logger.error(f"No valid images found for training for user {emp_id}")
+            logger.error(f"No valid images found for training for user {emp_id}, industry {industry}")
             return Response(ErrorResponseSerializer({'error': 'No valid images found for training'}).data, status=status.HTTP_400_BAD_REQUEST)
 
         logger.info(f"Prepared {len(valid_images)} valid images for dataset")
 
-        # Create data.yaml
         yaml_path = os.path.normpath(os.path.join(user_folder, 'data.yaml')).replace('\\', '/')
         with open(yaml_path, 'w') as f:
             f.write(f"""path: {user_folder}
@@ -643,12 +627,15 @@ names:
                 f.write(f"  {idx}: {name}\n")
         logger.debug(f"Created data.yaml: {yaml_path}")
 
-        # Verify yaml file exists
         if not os.path.exists(yaml_path):
             logger.error(f"YAML file not found: {yaml_path}")
             return Response(ErrorResponseSerializer({'error': 'Failed to create YAML file'}).data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         logger.info(f"Dataset preparation completed successfully for user {emp_id}, YAML saved to {yaml_path}")
+
+        redis_client.lpush(f"industry_yaml:{industry}", yaml_path)
+        logger.info(f"Stored YAML path for industry {industry}: {yaml_path}")
+
         return Response({
             'message': 'Dataset preparation complete',
             'yaml_path': yaml_path
@@ -661,12 +648,7 @@ names:
         logger.error(f"Dataset preparation failed for user {emp_id}: {str(e)}")
         return Response(ErrorResponseSerializer({'error': f'Dataset preparation failed: {str(e)}'}).data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
-
-
-################## detect_image Post API ####################
-
+################## Detect Image Post API ####################
 @swagger_auto_schema(
     method='post',
     manual_parameters=[
@@ -699,7 +681,6 @@ names:
 @parser_classes([MultiPartParser])
 def detect_defect_image(request):
     images = request.FILES.getlist('image')
-
     if not images:
         return Response(
             ErrorResponseSerializer({'error': 'Image file required'}).data,
@@ -709,15 +690,23 @@ def detect_defect_image(request):
     try:
         dashboard_user = request.user.dashboard_obj
         emp_id = dashboard_user.emp_id
+        industry = dashboard_user.industry
+        if not industry:
+            return Response(ErrorResponseSerializer({'error': 'User must have an industry assigned'}).data, status=status.HTTP_400_BAD_REQUEST)
+
         batch_id = str(uuid.uuid4())
         tmp_paths = []
         results_list = []
+
+        model_path = os.path.join(settings.BASE_DIR, f"{industry}_model.pt")
+        local_model = YOLO(model_path) if os.path.exists(model_path) else model
 
         for idx, image_file in enumerate(images):
             dashboard_image = DashboardImage.objects.create(
                 dashboard_user=dashboard_user,
                 emp_id=emp_id,
-                image=image_file
+                image=image_file,
+                industry=industry
             )
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
@@ -726,7 +715,7 @@ def detect_defect_image(request):
                 tmp_path = tmp.name
             tmp_paths.append(tmp_path)
 
-            results = model(tmp_path)
+            results = local_model(tmp_path)
             annotated_img = results[0].plot()
 
             detected_defects = []
@@ -750,10 +739,10 @@ def detect_defect_image(request):
                 image_id=dashboard_image,
                 defect_result=json.dumps(detected_defects),
                 source='image',
-                batch_id=batch_id
+                batch_id=batch_id,
+                industry=industry
             )
 
-            # Save annotated image to MEDIA
             result_dir = os.path.join('image_results', batch_id).replace('\\', '/')
             full_result_dir = os.path.join(settings.MEDIA_ROOT, result_dir)
             os.makedirs(full_result_dir, exist_ok=True)
@@ -766,10 +755,10 @@ def detect_defect_image(request):
             results_list.append({
                 'original_url': request.build_absolute_uri(dashboard_image.image.url),
                 'annotated_url': frame_url,
-                'class_names': [d['class'] for d in detected_defects]
+                'class_names': [d['class'] for d in detected_defects],
+                'industry': industry
             })
 
-        # Remove temp files
         for path in tmp_paths:
             if os.path.exists(path):
                 try:
@@ -777,7 +766,6 @@ def detect_defect_image(request):
                 except PermissionError:
                     logger.warning(f"Could not delete temporary file {path} due to PermissionError")
 
-        # SAME JSON RESPONSE FOR SINGLE & MULTIPLE IMAGES
         return Response({
             'batch_id': batch_id,
             'results': results_list
@@ -800,11 +788,7 @@ def detect_defect_image(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-
-
-
-################### detect_Image Get API ####################
-
+################## Detect Image Get API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="List detection results for the authenticated employee's latest image upload",
@@ -838,7 +822,8 @@ def detect_defect_image(request):
                             description='List of defect class names'
                         ),
                         'image_url': openapi.Schema(type=openapi.TYPE_STRING, description='URL of the original image'),
-                        'source': openapi.Schema(type=openapi.TYPE_STRING, description='Source of detection (image)')
+                        'source': openapi.Schema(type=openapi.TYPE_STRING, description='Source of detection (image)'),
+                        'industry': openapi.Schema(type=openapi.TYPE_STRING, description='Industry of the detection')
                     }
                 )
             )
@@ -855,8 +840,9 @@ def list_image_detection_results(request):
     try:
         dashboard_user = request.user.dashboard_obj
         emp_id = dashboard_user.emp_id
+        industry = dashboard_user.industry
 
-        results_qs = DetectionResult.objects.filter(emp_id=emp_id, source='image')
+        results_qs = DetectionResult.objects.filter(emp_id=emp_id, source='image', industry=industry)
         batch_id = request.GET.get('batch_id')
         if batch_id:
             results_qs = results_qs.filter(batch_id=batch_id)
@@ -871,7 +857,8 @@ def list_image_detection_results(request):
             {
                 'class_names': [defect['class'] for defect in json.loads(result.defect_result)] if result.defect_result else [],
                 'image_url': request.build_absolute_uri(result.image_id.image.url) if result.image_id and result.image_id.image else None,
-                'source': result.source
+                'source': result.source,
+                'industry': result.industry
             }
             for result in results_qs
         ]
@@ -884,10 +871,7 @@ def list_image_detection_results(request):
 
 
 
-
-
-# ################## detect_video API ####################
-
+################## Detect Video API ####################
 @swagger_auto_schema(
     method='post',
     manual_parameters=[
@@ -910,7 +894,8 @@ def list_image_detection_results(request):
                     'total_frames': openapi.Schema(type=openapi.TYPE_INTEGER),
                     'defective_frames': openapi.Schema(type=openapi.TYPE_INTEGER),
                     'saved_frames': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING)),
-                    'batch_id': openapi.Schema(type=openapi.TYPE_STRING)
+                    'batch_id': openapi.Schema(type=openapi.TYPE_STRING),
+                    'industry': openapi.Schema(type=openapi.TYPE_STRING)
                 }
             )
         ),
@@ -932,7 +917,13 @@ def detect_defect_video(request):
     try:
         dashboard_user = request.user.dashboard_obj
         emp_id = dashboard_user.emp_id
+        industry = dashboard_user.industry
+        if not industry:
+            return Response(ErrorResponseSerializer({'error': 'User must have an industry assigned'}).data, status=status.HTTP_400_BAD_REQUEST)
+
         batch_id = str(uuid.uuid4())
+        model_path = os.path.join(settings.BASE_DIR, f"{industry}_model.pt")
+        local_model = YOLO(model_path) if os.path.exists(model_path) else model
 
         result_dir = os.path.join('defect_results', batch_id).replace('\\', '/')
         full_result_dir = os.path.join(settings.MEDIA_ROOT, result_dir)
@@ -971,7 +962,7 @@ def detect_defect_video(request):
                     frame_number += 1
                     continue
 
-                model_results = model(frame)
+                model_results = local_model(frame)
                 detected_defects = []
 
                 for result in model_results:
@@ -1006,7 +997,8 @@ def detect_defect_video(request):
                         dashboard_image = DashboardImage.objects.create(
                             dashboard_user=dashboard_user,
                             emp_id=emp_id,
-                            image=frame_path
+                            image=frame_path,
+                            industry=industry
                         )
 
                         DetectionResult.objects.create(
@@ -1015,7 +1007,8 @@ def detect_defect_video(request):
                             image_id=dashboard_image,
                             defect_result=json.dumps(detected_defects),
                             source='video',
-                            batch_id=batch_id
+                            batch_id=batch_id,
+                            industry=industry
                         )
                     else:
                         logger.warning(f"Failed to save frame: {full_frame_path}")
@@ -1028,7 +1021,8 @@ def detect_defect_video(request):
                     'total_frames': total_frames,
                     'defective_frames': 0,
                     'saved_frames': saved_frames,
-                    'batch_id': batch_id
+                    'batch_id': batch_id,
+                    'industry': industry
                 }, status=status.HTTP_200_OK)
 
             results_url = request.build_absolute_uri(f'/media/{result_dir}/')
@@ -1037,7 +1031,8 @@ def detect_defect_video(request):
                 'total_frames': total_frames,
                 'defective_frames': defective_frames,
                 'saved_frames': saved_frames,
-                'batch_id': batch_id
+                'batch_id': batch_id,
+                'industry': industry
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
@@ -1058,9 +1053,7 @@ def detect_defect_video(request):
 
 
 
-
-################### detect_video  Get API ####################
-
+################## Detect Video Get API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="List video detection results for the authenticated employee's latest video upload",
@@ -1094,7 +1087,8 @@ def detect_defect_video(request):
                             description='List of defect class names'
                         ),
                         'image_url': openapi.Schema(type=openapi.TYPE_STRING, description='URL of the video frame image'),
-                        'source': openapi.Schema(type=openapi.TYPE_STRING, description='Source of detection (video)')
+                        'source': openapi.Schema(type=openapi.TYPE_STRING, description='Source of detection (video)'),
+                        'industry': openapi.Schema(type=openapi.TYPE_STRING, description='Industry of the detection')
                     }
                 )
             )
@@ -1111,8 +1105,9 @@ def list_video_detection_results(request):
     try:
         dashboard_user = request.user.dashboard_obj
         emp_id = dashboard_user.emp_id
+        industry = dashboard_user.industry
 
-        results_qs = DetectionResult.objects.filter(emp_id=emp_id, source='video')
+        results_qs = DetectionResult.objects.filter(emp_id=emp_id, source='video', industry=industry)
         batch_id = request.GET.get('batch_id')
         if batch_id:
             results_qs = results_qs.filter(batch_id=batch_id)
@@ -1127,7 +1122,8 @@ def list_video_detection_results(request):
             {
                 'class_names': [defect['class'] for defect in json.loads(result.defect_result)] if result.defect_result else [],
                 'image_url': request.build_absolute_uri(result.image_id.image.url) if result.image_id and result.image_id.image else None,
-                'source': result.source
+                'source': result.source,
+                'industry': result.industry
             }
             for result in results_qs
         ]
@@ -1138,13 +1134,7 @@ def list_video_detection_results(request):
     except Exception as e:
         return Response(ErrorResponseSerializer({'error': str(e)}).data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
-
-
-
-# -------------------- 1️⃣ Generate Batch ID --------------------
-
+################## Generate Batch ID API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="Generate a new batch ID for live detection session",
@@ -1173,19 +1163,12 @@ def list_video_detection_results(request):
     },
     security=[{'BearerAuth': []}]
 )
-
-
 @api_view(['GET'])
 @authentication_classes([DashboardJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def generate_batch_id(request):
     try:
-        print(f"Request headers: {dict(request.headers)}")
-        print(f"User: {request.user}")
-        
         dashboard_user = request.user.dashboard_obj
-        print(f"Dashboard user: {dashboard_user}")
-        
         batch_id = str(uuid.uuid4())
         redis_client.set(f"live_session:{batch_id}", json.dumps([]))
         logger.info(f"Generated batch_id: {batch_id} for user: {dashboard_user.emp_id}")
@@ -1199,85 +1182,77 @@ def generate_batch_id(request):
         logger.error(f"Failed to generate batch_id: {str(e)}")
         return Response({'error': f'Server error: {str(e)}'}, status=500)
 
-
-
-
-
-# -------------------- 2️⃣ Detect Defect Live --------------------
-
-
-# @swagger_auto_schema(
-#     method='post',
-#     operation_summary="Detect defects in a live image frame",
-#     operation_description="Processes a single base64-encoded image frame, runs defect detection using the model, and returns annotated image and defect details. Requires JWT authentication.",
-#     manual_parameters=[
-#         openapi.Parameter(
-#             name='Authorization',
-#             in_=openapi.IN_HEADER,
-#             type=openapi.TYPE_STRING,
-#             required=False,  # Now optional, since we support token in query
-#             description='Bearer token in the format: Bearer <token>'
-#         ),
-#     ],
-#     request_body=openapi.Schema(
-#         type=openapi.TYPE_OBJECT,
-#         required=['batch_id', 'image'],
-#         properties={
-#             'batch_id': openapi.Schema(type=openapi.TYPE_STRING, description='Batch ID for the live detection session'),
-#             'image': openapi.Schema(type=openapi.TYPE_STRING, description='Base64-encoded image data')
-#         }
-#     ),
-#     responses={
-#         200: openapi.Response(
-#             description="Successful defect detection",
-#             schema=openapi.Schema(
-#                 type=openapi.TYPE_OBJECT,
-#                 properties={
-#                     'annotated_image': openapi.Schema(type=openapi.TYPE_STRING, description='Base64-encoded annotated image with detected defects'),
-#                     'defects': openapi.Schema(
-#                         type=openapi.TYPE_ARRAY,
-#                         items=openapi.Items(
-#                             type=openapi.TYPE_OBJECT,
-#                             properties={
-#                                 'class': openapi.Schema(type=openapi.TYPE_STRING, description='Defect class name'),
-#                                 'confidence': openapi.Schema(type=openapi.TYPE_NUMBER, description='Confidence score of the detection'),
-#                                 'bbox': openapi.Schema(
-#                                     type=openapi.TYPE_OBJECT,
-#                                     properties={
-#                                         'x1': openapi.Schema(type=openapi.TYPE_NUMBER, description='Top-left x coordinate'),
-#                                         'y1': openapi.Schema(type=openapi.TYPE_NUMBER, description='Top-left y coordinate'),
-#                                         'x2': openapi.Schema(type=openapi.TYPE_NUMBER, description='Bottom-right x coordinate'),
-#                                         'y2': openapi.Schema(type=openapi.TYPE_NUMBER, description='Bottom-right y coordinate')
-#                                     }
-#                                 )
-#                             }
-#                         )
-#                     ),
-#                     'image_url': openapi.Schema(type=openapi.TYPE_STRING, description='URL of the saved annotated image', nullable=True)
-#                 }
-#             )
-#         ),
-#         400: ErrorResponseSerializer,
-#         401: ErrorResponseSerializer,
-#         404: ErrorResponseSerializer,
-#         500: ErrorResponseSerializer
-#     },
-#     security=[{'BearerAuth': []}]
-#     security=[{'BearerAuth': []}]
-# )
-
+################## Detect Defect Live API ####################
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Detect defects in a live image frame",
+    operation_description="Processes a single base64-encoded image frame, runs defect detection using the model, and returns annotated image and defect details. Requires JWT authentication.",
+    manual_parameters=[
+        openapi.Parameter(
+            name='Authorization',
+            in_=openapi.IN_HEADER,
+            type=openapi.TYPE_STRING,
+            required=True,
+            description='Bearer token in the format: Bearer <token>'
+        ),
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['batch_id', 'image'],
+        properties={
+            'batch_id': openapi.Schema(type=openapi.TYPE_STRING, description='Batch ID for the live detection session'),
+            'image': openapi.Schema(type=openapi.TYPE_STRING, description='Base64-encoded image data')
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="Successful defect detection",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'annotated_image': openapi.Schema(type=openapi.TYPE_STRING, description='Base64-encoded annotated image with detected defects'),
+                    'defects': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Items(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'class': openapi.Schema(type=openapi.TYPE_STRING, description='Defect class name'),
+                                'confidence': openapi.Schema(type=openapi.TYPE_NUMBER, description='Confidence score of the detection'),
+                                'bbox': openapi.Schema(
+                                    type=openapi.TYPE_OBJECT,
+                                    properties={
+                                        'x1': openapi.Schema(type=openapi.TYPE_NUMBER, description='Top-left x coordinate'),
+                                        'y1': openapi.Schema(type=openapi.TYPE_NUMBER, description='Top-left y coordinate'),
+                                        'x2': openapi.Schema(type=openapi.TYPE_NUMBER, description='Bottom-right x coordinate'),
+                                        'y2': openapi.Schema(type=openapi.TYPE_NUMBER, description='Bottom-right y coordinate')
+                                    }
+                                )
+                            }
+                        )
+                    ),
+                    'image_url': openapi.Schema(type=openapi.TYPE_STRING, description='URL of the saved annotated image', nullable=True),
+                    'industry': openapi.Schema(type=openapi.TYPE_STRING, description='Industry of the detection')
+                }
+            )
+        ),
+        400: ErrorResponseSerializer,
+        401: ErrorResponseSerializer,
+        404: ErrorResponseSerializer,
+        500: ErrorResponseSerializer
+    },
+    security=[{'BearerAuth': []}]
+)
 @api_view(['POST'])
 @authentication_classes([DashboardJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def detect_defect_live(request):
-    """
-    Processes a single image frame sent from the frontend (base64 JSON),
-    runs defect detection, and returns results.
-    Requires Bearer token in Authorization header.
-    """
     try:
         dashboard_user = request.user.dashboard_obj
         emp_id = dashboard_user.emp_id
+        industry = dashboard_user.industry
+        if not industry:
+            return Response(ErrorResponseSerializer({'error': 'User must have an industry assigned'}).data, status=status.HTTP_400_BAD_REQUEST)
+
         batch_id = request.data.get('batch_id')
         image_data = request.data.get('image')
 
@@ -1286,11 +1261,9 @@ def detect_defect_live(request):
         if not image_data:
             return Response({'error': 'No image provided'}, status=400)
 
-        # Check if batch exists in Redis
         if not redis_client.exists(f"live_session:{batch_id}"):
             return Response({'error': 'No active session found for this batch_id'}, status=404)
 
-        # Decode base64 image
         if image_data.startswith("data:image"):
             image_data = image_data.split(",")[1]
         img_bytes = base64.b64decode(image_data)
@@ -1299,11 +1272,12 @@ def detect_defect_live(request):
         if frame is None:
             return Response({'error': 'Invalid image format'}, status=400)
 
-        # Resize for performance
         frame = cv2.resize(frame, (640, 480))
 
-        # ---------------- Run model inference ----------------
-        model_results = model(frame)  # replace with your model inference
+        model_path = os.path.join(settings.BASE_DIR, f"{industry}_model.pt")
+        local_model = YOLO(model_path) if os.path.exists(model_path) else model
+
+        model_results = local_model(frame)
         detected_defects = []
 
         for result in model_results:
@@ -1320,17 +1294,14 @@ def detect_defect_live(request):
                 }
                 detected_defects.append(defect)
 
-        # Annotated image
         annotated_img = model_results[0].plot()
-
-        # Encode annotated image to base64
         _, jpeg_frame = cv2.imencode('.jpg', annotated_img)
         response_data = {
             'annotated_image': base64.b64encode(jpeg_frame.tobytes()).decode('utf-8'),
-            'defects': detected_defects
+            'defects': detected_defects,
+            'industry': industry
         }
 
-        # Save defected images & update Redis
         if detected_defects:
             frame_filename = f"live_frame_{uuid.uuid4().hex}.jpg"
             frame_dir = os.path.join('live_results', batch_id)
@@ -1338,11 +1309,11 @@ def detect_defect_live(request):
             frame_path = os.path.join(frame_dir, frame_filename).replace('\\', '/')
             cv2.imwrite(os.path.join(settings.MEDIA_ROOT, frame_path), annotated_img)
 
-            # Save to DB
             dashboard_image = DashboardImage.objects.create(
                 dashboard_user=dashboard_user,
                 emp_id=emp_id,
-                image=frame_path
+                image=frame_path,
+                industry=industry
             )
             DetectionResult.objects.create(
                 dashboard_user=dashboard_user,
@@ -1350,18 +1321,19 @@ def detect_defect_live(request):
                 image_id=dashboard_image,
                 defect_result=json.dumps(detected_defects),
                 source='live',
-                batch_id=batch_id
+                batch_id=batch_id,
+                industry=industry
             )
 
             image_url = request.build_absolute_uri(dashboard_image.image.url)
             response_data['image_url'] = image_url
 
-            # Update Redis session
             session_data = json.loads(redis_client.get(f"live_session:{batch_id}") or "[]")
             session_data.append({
                 'class_names': [d['class'] for d in detected_defects],
-                'image_url': image_url if detected_defects else None,
-                'source': 'live'
+                'image_url': image_url,
+                'source': 'live',
+                'industry': industry
             })
             redis_client.set(f"live_session:{batch_id}", json.dumps(session_data))
 
@@ -1373,12 +1345,7 @@ def detect_defect_live(request):
         logger.error(f"Error processing frame for batch_id {batch_id}: {str(e)}")
         return Response({'error': f'Server error: {str(e)}'}, status=500)
 
-
-
-
-
-# -------------------- 3️⃣ Stop Live Detection --------------------
-
+################## Stop Live Detection API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="Stop a live detection session and retrieve results",
@@ -1420,7 +1387,8 @@ def detect_defect_live(request):
                         'source': openapi.Schema(
                             type=openapi.TYPE_STRING,
                             description='Source of the detection (e.g., live)'
-                        )
+                        ),
+                        'industry': openapi.Schema(type=openapi.TYPE_STRING, description='Industry of the detection')
                     }
                 )
             )
@@ -1435,9 +1403,6 @@ def detect_defect_live(request):
 @authentication_classes([DashboardJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def stop_live_detection(request):
-    """
-    Stop a live detection session and return all defected images detected during that session.
-    """
     batch_id = request.GET.get('batch_id')
     if not batch_id:
         return Response({'error': 'batch_id is required'}, status=400)
@@ -1456,21 +1421,15 @@ def stop_live_detection(request):
         {
             "class_names": img.get("class_names", []),
             "image_url": img.get("image_url"),
-            "source": img.get("source")
+            "source": img.get("source"),
+            "industry": img.get("industry")
         }
         for img in defected_images
     ]
 
     return Response(response_data, status=status.HTTP_200_OK)
 
-
-
-
-
-
-
-#################### analysis_dashboard API #####################
-
+################## Analysis Dashboard API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="Get analysis dashboard data for the authenticated user",
@@ -1498,6 +1457,7 @@ def stop_live_detection(request):
                 properties={
                     'line_number': openapi.Schema(type=openapi.TYPE_STRING),
                     'department': openapi.Schema(type=openapi.TYPE_STRING),
+                    'industry': openapi.Schema(type=openapi.TYPE_STRING),
                     'account_created_time': openapi.Schema(type=openapi.TYPE_STRING, format='date-time'),
                     'total_annotated_images': openapi.Schema(type=openapi.TYPE_INTEGER),
                     'defects_found': openapi.Schema(
@@ -1513,7 +1473,8 @@ def stop_live_detection(request):
                                         properties={
                                             'time': openapi.Schema(type=openapi.TYPE_STRING, format='time'),
                                             'defect_result': openapi.Schema(type=openapi.TYPE_STRING),
-                                            'source': openapi.Schema(type=openapi.TYPE_STRING)
+                                            'source': openapi.Schema(type=openapi.TYPE_STRING),
+                                            'industry': openapi.Schema(type=openapi.TYPE_STRING)
                                         }
                                     )
                                 )
@@ -1535,19 +1496,15 @@ def analysis_dashboard(request):
     try:
         dashboard_user = request.user.dashboard_obj
         emp_id = dashboard_user.emp_id
+        industry = dashboard_user.industry
 
-        # Get user details from seamguard_dashboard
         line_number = dashboard_user.line_number
         department = dashboard_user.department
-        account_created_time = dashboard_user.created_at  # Assuming 'created_at' field in Dashboard model for account creation time
+        account_created_time = dashboard_user.created_at
+        total_annotated_images = Annotation.objects.filter(user=dashboard_user, industry=industry).values('image_id').distinct().count()
 
-        # Total annotated images from seamguard_annotation
-        total_annotated_images = Annotation.objects.filter(user=dashboard_user).values('image_id').distinct().count()
+        detections = DetectionResult.objects.filter(emp_id=emp_id, industry=industry)
 
-        # Defects from seamguard_detectionresult
-        detections = DetectionResult.objects.filter(emp_id=emp_id)
-
-        # Optional date filter
         selected_date = request.query_params.get('date')
         if selected_date:
             parsed_date = parse_date(selected_date)
@@ -1555,7 +1512,6 @@ def analysis_dashboard(request):
                 return Response(ErrorResponseSerializer({'error': 'Invalid date format. Use YYYY-MM-DD.'}).data, status=status.HTTP_400_BAD_REQUEST)
             detections = detections.filter(created_at__date=parsed_date)
 
-        # Group defects by date
         defects_found = []
         dates = detections.values_list('created_at__date', flat=True).distinct()
         for date in dates:
@@ -1565,7 +1521,8 @@ def analysis_dashboard(request):
                 detections_list.append({
                     'time': d.created_at.strftime('%H:%M:%S'),
                     'defect_result': d.defect_result,
-                    'source': d.source
+                    'source': d.source,
+                    'industry': d.industry
                 })
             defects_found.append({
                 'date': date.strftime('%Y-%m-%d'),
@@ -1575,6 +1532,7 @@ def analysis_dashboard(request):
         return Response({
             'line_number': line_number,
             'department': department,
+            'industry': industry,
             'account_created_time': account_created_time,
             'total_annotated_images': total_annotated_images,
             'defects_found': defects_found
@@ -1586,11 +1544,8 @@ def analysis_dashboard(request):
     except Exception as e:
         logger.error(f"Error fetching analysis data: {str(e)}")
         return Response(ErrorResponseSerializer({'error': str(e)}).data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
 
-
-#################### analysis_dashboard API By date wise #####################
-
+################## Total Annotated Images API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="Get total annotated images for the authenticated user",
@@ -1609,7 +1564,8 @@ def analysis_dashboard(request):
             schema=openapi.Schema(
                 type=openapi.TYPE_OBJECT,
                 properties={
-                    'total_annotated_images': openapi.Schema(type=openapi.TYPE_INTEGER)
+                    'total_annotated_images': openapi.Schema(type=openapi.TYPE_INTEGER),
+                    'industry': openapi.Schema(type=openapi.TYPE_STRING)
                 }
             )
         ),
@@ -1623,19 +1579,19 @@ def analysis_dashboard(request):
 def total_annotated_images(request):
     try:
         dashboard_user = request.user.dashboard_obj
-        total = Annotation.objects.filter(user=dashboard_user).values('image_id').distinct().count()
-        return Response({'total_annotated_images': total}, status=status.HTTP_200_OK)
+        industry = dashboard_user.industry
+        total = Annotation.objects.filter(user=dashboard_user, industry=industry).values('image_id').distinct().count()
+        return Response({
+            'total_annotated_images': total,
+            'industry': industry
+        }, status=status.HTTP_200_OK)
     except AttributeError:
         return Response(ErrorResponseSerializer({'error': 'User authentication data not found'}).data, status=status.HTTP_401_UNAUTHORIZED)
     except Exception as e:
         logger.error(f"Error fetching annotated images count: {str(e)}")
         return Response(ErrorResponseSerializer({'error': str(e)}).data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
-
-#################### defects_by_date API #####################
-
+################## Defects by Date API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="Get defects found by date for the authenticated user",
@@ -1665,7 +1621,8 @@ def total_annotated_images(request):
                                 properties={
                                     'time': openapi.Schema(type=openapi.TYPE_STRING, format='time'),
                                     'defect_result': openapi.Schema(type=openapi.TYPE_STRING),
-                                    'source': openapi.Schema(type=openapi.TYPE_STRING)
+                                    'source': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'industry': openapi.Schema(type=openapi.TYPE_STRING)
                                 }
                             )
                         )
@@ -1685,10 +1642,10 @@ def defects_by_date(request):
     try:
         dashboard_user = request.user.dashboard_obj
         emp_id = dashboard_user.emp_id
+        industry = dashboard_user.industry
 
-        detections = DetectionResult.objects.filter(emp_id=emp_id)
+        detections = DetectionResult.objects.filter(emp_id=emp_id, industry=industry)
 
-        # Optional date filter
         selected_date = request.query_params.get('date')
         if selected_date:
             parsed_date = parse_date(selected_date)
@@ -1696,7 +1653,6 @@ def defects_by_date(request):
                 return Response(ErrorResponseSerializer({'error': 'Invalid date format. Use YYYY-MM-DD.'}).data, status=status.HTTP_400_BAD_REQUEST)
             detections = detections.filter(created_at__date=parsed_date)
 
-        # Group by date
         defects_found = []
         dates = detections.values_list('created_at__date', flat=True).distinct()
         for date in dates:
@@ -1706,7 +1662,8 @@ def defects_by_date(request):
                 detections_list.append({
                     'time': d.created_at.strftime('%H:%M:%S'),
                     'defect_result': d.defect_result,
-                    'source': d.source
+                    'source': d.source,
+                    'industry': d.industry
                 })
             defects_found.append({
                 'date': date.strftime('%Y-%m-%d'),
@@ -1720,10 +1677,7 @@ def defects_by_date(request):
         logger.error(f"Error fetching defects by date: {str(e)}")
         return Response(ErrorResponseSerializer({'error': str(e)}).data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-
-#################### login_details API #####################
-
+################## Login Details API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="Get login details for the authenticated user",
@@ -1744,6 +1698,7 @@ def defects_by_date(request):
                 properties={
                     'line_number': openapi.Schema(type=openapi.TYPE_STRING),
                     'department': openapi.Schema(type=openapi.TYPE_STRING),
+                    'industry': openapi.Schema(type=openapi.TYPE_STRING),
                     'created_time': openapi.Schema(type=openapi.TYPE_STRING, format='date-time')
                 }
             )
@@ -1761,6 +1716,7 @@ def login_details(request):
         return Response({
             'line_number': dashboard_user.line_number,
             'department': dashboard_user.department,
+            'industry': dashboard_user.industry,
             'created_time': dashboard_user.created_at
         }, status=status.HTTP_200_OK)
     except AttributeError:
@@ -1769,9 +1725,7 @@ def login_details(request):
         logger.error(f"Error fetching login details: {str(e)}")
         return Response(ErrorResponseSerializer({'error': str(e)}).data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-
-#################### Admin List Users API #####################
-
+################## Admin List Users API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="List all users (Admin only)",
@@ -1785,7 +1739,7 @@ def login_details(request):
         ),
     ],
     responses={
-        200: UserSerializer(many=True),  # Updated to UserSerializer
+        200: UserSerializer(many=True),
         403: ErrorResponseSerializer,
         401: ErrorResponseSerializer
     },
@@ -1799,15 +1753,10 @@ def admin_list_users(request):
         return Response(ErrorResponseSerializer({'error': 'Admin access required'}).data, status=status.HTTP_403_FORBIDDEN)
     
     users = User.objects.all()
-    serializer = UserSerializer(users, many=True)  # Updated to UserSerializer
+    serializer = UserSerializer(users, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-
-
-
-#################### Admin User Detail API #####################
-
+################## Admin User Detail API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="Get user details (Admin only)",
@@ -1838,7 +1787,7 @@ def admin_list_users(request):
         200: openapi.Response(
             description="User details",
             schema=openapi.Schema(
-                type=openapi.TYPE_ARRAY,  # whole response is a list
+                type=openapi.TYPE_ARRAY,
                 items=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
@@ -1849,7 +1798,8 @@ def admin_list_users(request):
                             additional_properties=openapi.Schema(type=openapi.TYPE_INTEGER),
                             description="Dictionary of defect class names and their counts"
                         ),
-                        'logins_total': openapi.Schema(type=openapi.TYPE_INTEGER)
+                        'logins_total': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'industry': openapi.Schema(type=openapi.TYPE_STRING)
                     }
                 )
             )
@@ -1861,36 +1811,31 @@ def admin_list_users(request):
     },
     security=[{'BearerAuth': []}]
 )
-
-
 @api_view(['GET'])
 @authentication_classes([DashboardJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def admin_user_detail(request, emp_id):
     if not request.user.is_admin:
-        return Response(ErrorResponseSerializer({'error': 'Admin access required'}).data,
-                        status=status.HTTP_403_FORBIDDEN)
+        return Response(ErrorResponseSerializer({'error': 'Admin access required'}).data, status=status.HTTP_403_FORBIDDEN)
     
     dashboard_user = Dashboard.objects.filter(emp_id=emp_id).first()
     if not dashboard_user:
-        return Response(ErrorResponseSerializer({'error': 'User not found'}).data,
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(ErrorResponseSerializer({'error': 'User not found'}).data, status=status.HTTP_404_NOT_FOUND)
     
-    annotations_total = Annotation.objects.filter(user=dashboard_user).count()
+    industry = dashboard_user.industry
+    annotations_total = Annotation.objects.filter(user=dashboard_user, industry=industry).count()
     
     date_str = request.GET.get('date')
     if date_str:
         date_obj = parse_date(date_str)
         if not date_obj:
-            return Response(ErrorResponseSerializer({'error': 'Invalid date format'}).data,
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(ErrorResponseSerializer({'error': 'Invalid date format'}).data, status=status.HTTP_400_BAD_REQUEST)
     else:
         date_obj = datetime.date.today()
     
-    detections = DetectionResult.objects.filter(emp_id=emp_id, created_at__date=date_obj)
+    detections = DetectionResult.objects.filter(emp_id=emp_id, created_at__date=date_obj, industry=industry)
     detections_today = detections.count()
     
-    # Count defect class names
     defect_counter = Counter()
     for detection in detections:
         defect_result = detection.defect_result or []
@@ -1909,23 +1854,15 @@ def admin_user_detail(request, emp_id):
     
     logins_total = LoginHistory.objects.filter(user=dashboard_user).count()
     
-    # Wrap response inside a list
     return Response([{
         'annotations_total': annotations_total,
         'detections_today': detections_today,
-        'defect_types_today': defect_counter,   # dict of {class: count}
-        'logins_total': logins_total
+        'defect_types_today': defect_counter,
+        'logins_total': logins_total,
+        'industry': industry
     }], status=status.HTTP_200_OK)
 
-
-
-
-
-
-#################### Admin All User Detail API #####################
-
-
-
+################## Admin All Users Detail API ####################
 @swagger_auto_schema(
     method='get',
     operation_summary="Get details for all users (Admin only)",
@@ -1961,7 +1898,8 @@ def admin_user_detail(request, emp_id):
                             additional_properties=openapi.Schema(type=openapi.TYPE_INTEGER),
                             description='Dictionary of defect class names and their counts for the specified date'
                         ),
-                        'logins_total': openapi.Schema(type=openapi.TYPE_INTEGER)
+                        'logins_total': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'industry': openapi.Schema(type=openapi.TYPE_STRING)
                     }
                 )
             )
@@ -1979,7 +1917,6 @@ def admin_all_users_detail(request):
     if not request.user.is_admin:
         return Response(ErrorResponseSerializer({'error': 'Admin access required'}).data, status=status.HTTP_403_FORBIDDEN)
     
-    # Get date from query parameter or default to today
     date_str = request.GET.get('date')
     if date_str:
         date_obj = parse_date(date_str)
@@ -1988,25 +1925,19 @@ def admin_all_users_detail(request):
     else:
         date_obj = datetime.date.today()
     
-    # Get all unique emp_ids from DetectionResult
     emp_ids = DetectionResult.objects.values('emp_id').distinct()
     
-    # Prepare response data
     users_data = []
     for emp in emp_ids:
         emp_id = emp['emp_id']
-        
-        # Get dashboard user for annotations and logins
         dashboard_user = Dashboard.objects.filter(emp_id=emp_id).first()
         
-        # Calculate annotations_total
-        annotations_total = Annotation.objects.filter(user=dashboard_user).count() if dashboard_user else 0
+        industry = dashboard_user.industry if dashboard_user else None
+        annotations_total = Annotation.objects.filter(user=dashboard_user, industry=industry).count() if dashboard_user else 0
         
-        # Filter DetectionResult for the given emp_id and date
-        detections = DetectionResult.objects.filter(emp_id=emp_id, created_at__date=date_obj)
+        detections = DetectionResult.objects.filter(emp_id=emp_id, created_at__date=date_obj, industry=industry)
         detections_today = detections.count()
         
-        # Count defect class occurrences
         defect_types = {}
         for detection in detections:
             defect_result = detection.defect_result or []
@@ -2024,27 +1955,20 @@ def admin_all_users_detail(request):
                 if class_name:
                     defect_types[class_name] = defect_types.get(class_name, 0) + 1
         
-        # Calculate logins_total
         logins_total = LoginHistory.objects.filter(user=dashboard_user).count() if dashboard_user else 0
         
-        # Add user data to response
         users_data.append({
             'EMP_ID': emp_id,
             'annotations_total': annotations_total,
             'detections_today': detections_today,
             'defect_types_today': defect_types,
-            'logins_total': logins_total
+            'logins_total': logins_total,
+            'industry': industry
         })
     
     return Response(users_data, status=status.HTTP_200_OK)
 
-
-
-
-
-
-#################### Admin Delete User API #####################
-
+################## Admin Delete User API ####################
 @swagger_auto_schema(
     method='delete',
     operation_summary="Delete a user (Admin only)",
@@ -2083,10 +2007,308 @@ def admin_delete_user(request, emp_id):
     if not dashboard_user:
         return Response(ErrorResponseSerializer({'error': 'User not found'}).data, status=status.HTTP_404_NOT_FOUND)
     
-    # Delete related User
     User.objects.filter(emp_id=emp_id).delete()
-    
-    # Delete Dashboard (cascades to annotations, detections, etc.)
     dashboard_user.delete()
     
     return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+
+#################### NEW API: Get Industries List #####################
+
+@swagger_auto_schema(
+    method='get',
+    operation_summary="Get list of industries",
+    responses={
+        200: openapi.Response(
+            description="List of industries",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'industries': openapi.Schema(
+                        type=openapi.TYPE_ARRAY,
+                        items=openapi.Items(type=openapi.TYPE_STRING)
+                    )
+                }
+            )
+        )
+    }
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_industries_list(request):
+    return Response({"industries": industries})
+
+
+#################### NEW API: Set User Industry #####################
+
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Set user's industry",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['industry'],
+        properties={
+            'industry': openapi.Schema(type=openapi.TYPE_STRING)
+        }
+    ),
+    responses={
+        200: "success",
+        400: ErrorResponseSerializer,
+        401: ErrorResponseSerializer
+    },
+    security=[{'BearerAuth': []}]
+)
+@api_view(['POST'])
+@authentication_classes([DashboardJWTAuthentication])
+@permission_classes([IsAuthenticated])
+def set_user_industry(request):
+    industry = request.data.get('industry')
+    if not industry:
+        return Response(ErrorResponseSerializer({'error': 'industry is required'}), status=status.HTTP_400_BAD_REQUEST)
+    if industry not in industries:
+        return Response(ErrorResponseSerializer({'error': 'Invalid industry'}), status=status.HTTP_400_BAD_REQUEST)
+    try:
+        dashboard_user = request.user.dashboard_obj
+        dashboard_user.industry = industry  # Assuming 'industry' field exists in Dashboard model
+        dashboard_user.save()
+        return Response({'message': 'Industry updated successfully'}, status=status.HTTP_200_OK)
+    except AttributeError:
+        return Response(ErrorResponseSerializer({'error': 'User authentication data not found'}), status=status.HTTP_401_UNAUTHORIZED)
+    except Exception as e:
+        logger.error(f"Error setting industry: {str(e)}")
+        return Response(ErrorResponseSerializer({'error': str(e)}), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+#################### NEW API: Consolidate and Train #####################
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_summary="Consolidate sessions and train model for industry",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['industry', 'epochs'],
+        properties={
+            'industry': openapi.Schema(type=openapi.TYPE_STRING),
+            'epochs': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'from_scratch': openapi.Schema(type=openapi.TYPE_BOOLEAN, default=True)
+        }
+    ),
+    manual_parameters=[
+        openapi.Parameter(
+            name='Authorization',
+            in_=openapi.IN_HEADER,
+            type=openapi.TYPE_STRING,
+            required=True,
+            description='Bearer token in the format: Bearer <token>'
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            description="Training started or completed",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING),
+                    'model_path': openapi.Schema(type=openapi.TYPE_STRING)
+                }
+            )
+        ),
+        400: ErrorResponseSerializer,
+        401: ErrorResponseSerializer,
+        403: ErrorResponseSerializer,
+        500: ErrorResponseSerializer
+    },
+    security=[{'BearerAuth': []}]
+)
+@api_view(['POST'])
+@authentication_classes([DashboardJWTAuthentication])
+@permission_classes([IsAuthenticated])
+def consolidate_and_train(request):
+    if not request.user.is_admin:
+        serializer = ErrorResponseSerializer({'error': 'Admin access required'})
+        logger.error(f"Non-admin user attempted to access consolidate_and_train: {request.user}")
+        return Response(serializer.data, status=status.HTTP_403_FORBIDDEN)
+
+    industry = request.data.get('industry')
+    if not industry:
+        serializer = ErrorResponseSerializer({'error': 'industry is required'})
+        logger.error("Missing industry in request data")
+        return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        epochs = int(request.data['epochs'])
+        if epochs <= 0:
+            raise ValueError("epochs must be a positive integer")
+    except (KeyError, ValueError, TypeError) as e:
+        serializer = ErrorResponseSerializer({'error': f'valid epochs required: {str(e)}'})
+        logger.error(f"Invalid epochs value: {request.data.get('epochs')}, error: {str(e)}")
+        return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
+
+    from_scratch = request.data.get('from_scratch', True)
+    logger.info(f"Starting consolidation and training for industry: {industry}, epochs: {epochs}, from_scratch: {from_scratch}")
+
+    # Get yaml_paths from redis
+    key = f"industry_yaml:{industry}"
+    yaml_paths = redis_client.lrange(key, 0, -1)
+    if not yaml_paths:
+        serializer = ErrorResponseSerializer({'error': 'No sessions found for this industry'})
+        logger.error(f"No YAML paths found for industry: {industry}")
+        return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Consolidate
+        all_classes = set()
+        session_data = []
+        for yaml_p in yaml_paths:
+            logger.debug(f"Processing YAML path: {yaml_p}")
+            if not os.path.exists(yaml_p):
+                logger.warning(f"YAML file not found: {yaml_p}")
+                continue
+            try:
+                with open(yaml_p, 'r') as f:
+                    yaml_data = yaml.safe_load(f)
+                    if not all(key in yaml_data for key in ['path', 'train', 'val', 'names']):
+                        logger.warning(f"Invalid YAML structure in {yaml_p}")
+                        continue
+                    session_data.append({
+                        'path': yaml_data['path'],
+                        'train': yaml_data['train'],
+                        'val': yaml_data['val'],
+                        'names': yaml_data['names']
+                    })
+                    for name in yaml_data['names'].values():
+                        all_classes.add(name)
+            except Exception as e:
+                logger.warning(f"Failed to process YAML file {yaml_p}: {str(e)}")
+                continue
+
+        if not session_data:
+            serializer = ErrorResponseSerializer({'error': 'No valid sessions found for this industry'})
+            logger.error(f"No valid session data for industry: {industry}")
+            return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
+
+        unique_classes = sorted(all_classes)
+        new_class_to_id = {name: idx for idx, name in enumerate(unique_classes)}
+        logger.info(f"Consolidated {len(unique_classes)} unique classes: {unique_classes}")
+
+        # Create consolidated folder
+        consol_folder = os.path.normpath(os.path.join(settings.BASE_DIR, 'yolo_datasets', industry, f'consolidated_{str(uuid.uuid4())}')).replace('\\', '/')
+        os.makedirs(consol_folder, exist_ok=True)
+        train_images_dir = os.path.normpath(os.path.join(consol_folder, 'images', 'train')).replace('\\', '/')
+        train_labels_dir = os.path.normpath(os.path.join(consol_folder, 'labels', 'train')).replace('\\', '/')
+        os.makedirs(train_images_dir, exist_ok=True)
+        os.makedirs(train_labels_dir, exist_ok=True)
+
+        for sess in session_data:
+            old_images_dir = os.path.normpath(os.path.join(sess['path'], sess['train'])).replace('\\', '/')
+            old_labels_dir = os.path.normpath(os.path.join(sess['path'], 'labels', 'train')).replace('\\', '/')
+            old_id_to_name = sess['names']
+
+            if not os.path.exists(old_images_dir) or not os.path.exists(old_labels_dir):
+                logger.warning(f"Image or label directory not found: {old_images_dir}, {old_labels_dir}")
+                continue
+
+            try:
+                for img_file in os.listdir(old_images_dir):
+                    if not img_file.endswith('.jpg'):
+                        continue
+                    base = os.path.splitext(img_file)[0]
+                    old_img_p = os.path.normpath(os.path.join(old_images_dir, img_file)).replace('\\', '/')
+                    old_lab_p = os.path.normpath(os.path.join(old_labels_dir, f"{base}.txt")).replace('\\', '/')
+                    if not os.path.exists(old_lab_p):
+                        logger.warning(f"Label file not found: {old_lab_p}")
+                        continue
+                    new_base = str(uuid.uuid4())
+                    new_img_p = os.path.normpath(os.path.join(train_images_dir, f"{new_base}.jpg")).replace('\\', '/')
+                    new_lab_p = os.path.normpath(os.path.join(train_labels_dir, f"{new_base}.txt")).replace('\\', '/')
+                    try:
+                        shutil.copyfile(old_img_p, new_img_p)
+                        with open(old_lab_p, 'r') as f:
+                            lines = f.readlines()
+                        with open(new_lab_p, 'w') as f:
+                            for line in lines:
+                                parts = line.strip().split()
+                                try:
+                                    old_class_id = int(parts[0])
+                                    old_name = old_id_to_name.get(old_class_id)
+                                    if old_name is None:
+                                        logger.warning(f"Invalid class ID {old_class_id} in {old_lab_p}")
+                                        continue
+                                    new_class_id = new_class_to_id[old_name]
+                                    parts[0] = str(new_class_id)
+                                    f.write(' '.join(parts) + '\n')
+                                except (KeyError, ValueError) as e:
+                                    logger.warning(f"Error remapping class for {old_lab_p}: {str(e)}")
+                                    continue
+                    except Exception as e:
+                        logger.error(f"Error processing image/label {old_img_p}: {str(e)}")
+                        continue
+            except Exception as e:
+                logger.error(f"Error processing session data for {old_images_dir}: {str(e)}")
+                continue
+
+        # Verify that images and labels were copied
+        if not os.listdir(train_images_dir) or not os.listdir(train_labels_dir):
+            serializer = ErrorResponseSerializer({'error': 'No valid images or labels found for training'})
+            logger.error(f"No valid images or labels in {train_images_dir} or {train_labels_dir}")
+            return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create consolidated YAML
+        consol_yaml = os.path.normpath(os.path.join(consol_folder, 'data.yaml')).replace('\\', '/')
+        try:
+            with open(consol_yaml, 'w') as f:
+                f.write(f"path: {consol_folder}\ntrain: images/train\nval: images/train\nnc: {len(unique_classes)}\nnames:\n")
+                for idx, name in enumerate(unique_classes):
+                    f.write(f"  {idx}: {name}\n")
+            logger.info(f"Created consolidated YAML: {consol_yaml}")
+        except Exception as e:
+            logger.error(f"Failed to create YAML file {consol_yaml}: {str(e)}")
+            serializer = ErrorResponseSerializer({'error': f'Failed to create YAML file: {str(e)}'})
+            return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Train
+        try:
+            if from_scratch:
+                train_model = YOLO('yolov8n.yaml')
+            else:
+                train_model = YOLO('yolov8n.pt')
+            train_model.train(data=consol_yaml, epochs=epochs, project='runs', name=industry)
+            logger.info(f"Training completed for industry: {industry}")
+        except Exception as e:
+            logger.error(f"Training failed for industry {industry}: {str(e)}")
+            serializer = ErrorResponseSerializer({'error': f'Training failed: {str(e)}'})
+            return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Copy trained model
+        trained_path = os.path.join('runs', industry, 'weights', 'best.pt')
+        final_path = os.path.join(settings.BASE_DIR, f"{industry}_model.pt")
+        if os.path.exists(trained_path):
+            try:
+                shutil.copy(trained_path, final_path)
+                logger.info(f"Model copied to: {final_path}")
+            except Exception as e:
+                logger.error(f"Failed to copy model from {trained_path} to {final_path}: {str(e)}")
+                serializer = ErrorResponseSerializer({'error': f'Failed to copy trained model: {str(e)}'})
+                return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            logger.error(f"Trained model not found at: {trained_path}")
+            serializer = ErrorResponseSerializer({'error': 'Trained model not found'})
+            return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Clear the Redis list
+        try:
+            redis_client.delete(key)
+            logger.info(f"Cleared Redis key: {key}")
+        except Exception as e:
+            logger.error(f"Failed to clear Redis key {key}: {str(e)}")
+            # Continue despite Redis deletion failure, as training is complete
+
+        return Response({'message': 'Training completed', 'model_path': final_path}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        logger.error(f"Unexpected error in consolidate_and_train for industry {industry}: {str(e)}")
+        serializer = ErrorResponseSerializer({'error': f'Server error: {str(e)}'})
+        return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
